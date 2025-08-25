@@ -175,21 +175,34 @@ fn parse_castling(fen: String) -> #(Castling, String) {
   let castling = Castling(False, False, False, False)
   case fen {
     "-" <> fen -> #(castling, fen)
-    _ -> parse_castling_loop(fen, castling)
+    _ -> parse_castling_loop(fen, castling, False)
   }
 }
 
-fn parse_castling_loop(fen: String, castling: Castling) -> #(Castling, String) {
+fn parse_castling_loop(
+  fen: String,
+  castling: Castling,
+  parsed_any: Bool,
+) -> #(Castling, String) {
   case fen {
     "K" <> fen ->
-      parse_castling_loop(fen, Castling(..castling, white_kingside: True))
+      parse_castling_loop(fen, Castling(..castling, white_kingside: True), True)
     "k" <> fen ->
-      parse_castling_loop(fen, Castling(..castling, black_kingside: True))
+      parse_castling_loop(fen, Castling(..castling, black_kingside: True), True)
     "Q" <> fen ->
-      parse_castling_loop(fen, Castling(..castling, white_queenside: True))
+      parse_castling_loop(
+        fen,
+        Castling(..castling, white_queenside: True),
+        True,
+      )
     "q" <> fen ->
-      parse_castling_loop(fen, Castling(..castling, black_queenside: True))
-    _ -> #(castling, fen)
+      parse_castling_loop(
+        fen,
+        Castling(..castling, black_queenside: True),
+        True,
+      )
+    _ if parsed_any -> #(castling, fen)
+    _ -> #(all_castling, fen)
   }
 }
 
