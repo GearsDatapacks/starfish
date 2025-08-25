@@ -1,4 +1,5 @@
 import gleeunit
+import starfish
 
 pub fn main() -> Nil {
   gleeunit.main()
@@ -10,4 +11,6 @@ pub fn hello_world_test() {
   let greeting = "Hello, " <> name <> "!"
 
   assert greeting == "Hello, Joe!"
+
+  echo starfish.initial_position()
 }

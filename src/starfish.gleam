@@ -1,8 +1,8 @@
 import gleam/result
-import starfish/internal/board
+import starfish/internal/game
 
 pub type Game =
-  board.Game
+  game.Game
 
 pub const starting_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
@@ -11,7 +11,7 @@ pub fn new(fen: String) -> Result(Game, Nil) {
 }
 
 pub fn initial_position() -> Game {
-  todo
+  game.initial_position()
 }
 
 pub type Valid

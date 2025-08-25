@@ -1,11 +1,7 @@
-import gleam/dict.{type Dict}
-import gleam/option.{type Option}
 import iv
-import starfish/internal/hash
-import starfish/internal/piece_table
 
 pub type Board {
-  Board(iv.Array(Square))
+  Board(squares: iv.Array(Square))
 }
 
 pub type Square {
@@ -27,28 +23,73 @@ pub type Colour {
   Black
 }
 
-pub type Castling {
-  Castling(
-    white_kingside: Bool,
-    white_queenside: Bool,
-    black_kingside: Bool,
-    black_queenside: Bool,
-  )
+pub fn initial_position() -> Board {
+  Board(iv.from_list(initial_squares))
 }
 
-pub type Game {
-  Game(
-    // Game state
-    board: Board,
-    to_move: Colour,
-    castling: Castling,
-    en_passant_square: Option(Int),
-    half_moves: Int,
-    full_moves: Int,
-    // Extra information
-    zobrist_hash: Int,
-    hash_data: hash.HashData,
-    piece_tables: piece_table.PieceTables,
-    previous_positions: Dict(Int, Int),
-  )
-}
+const initial_squares = [
+  Occupied(Rook(White)),
+  Occupied(Knight(White)),
+  Occupied(Bishop(White)),
+  Occupied(Queen(White)),
+  Occupied(King(White)),
+  Occupied(Bishop(White)),
+  Occupied(Knight(White)),
+  Occupied(Rook(White)),
+  Occupied(Pawn(White)),
+  Occupied(Pawn(White)),
+  Occupied(Pawn(White)),
+  Occupied(Pawn(White)),
+  Occupied(Pawn(White)),
+  Occupied(Pawn(White)),
+  Occupied(Pawn(White)),
+  Occupied(Pawn(White)),
+  Empty,
+  Empty,
+  Empty,
+  Empty,
+  Empty,
+  Empty,
+  Empty,
+  Empty,
+  Empty,
+  Empty,
+  Empty,
+  Empty,
+  Empty,
+  Empty,
+  Empty,
+  Empty,
+  Empty,
+  Empty,
+  Empty,
+  Empty,
+  Empty,
+  Empty,
+  Empty,
+  Empty,
+  Empty,
+  Empty,
+  Empty,
+  Empty,
+  Empty,
+  Empty,
+  Empty,
+  Empty,
+  Occupied(Pawn(Black)),
+  Occupied(Pawn(Black)),
+  Occupied(Pawn(Black)),
+  Occupied(Pawn(Black)),
+  Occupied(Pawn(Black)),
+  Occupied(Pawn(Black)),
+  Occupied(Pawn(Black)),
+  Occupied(Pawn(Black)),
+  Occupied(Rook(Black)),
+  Occupied(Knight(Black)),
+  Occupied(Bishop(Black)),
+  Occupied(Queen(Black)),
+  Occupied(King(Black)),
+  Occupied(Bishop(Black)),
+  Occupied(Knight(Black)),
+  Occupied(Rook(Black)),
+]

@@ -1,1 +1,8 @@
-pub type PieceTables
+// TODO: Implement proper data
+pub type PieceTables {
+  PieceTables
+}
+
+pub fn make_tables() -> PieceTables {
+  PieceTables
+}
