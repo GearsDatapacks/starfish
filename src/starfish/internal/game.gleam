@@ -1,3 +1,4 @@
+import gleam/bool
 import gleam/dict.{type Dict}
 import gleam/option.{type Option, None, Some}
 import gleam/result
@@ -57,7 +58,7 @@ pub fn initial_position() -> Game {
 pub fn from_fen(fen: String) -> Game {
   let fen = strip_spaces(fen)
 
-  let #(board, fen) = board.from_fen(fen)
+  let #(board, fen, _) = board.from_fen(fen)
   let fen = strip_spaces(fen)
 
   let #(to_move, fen) = case fen {
@@ -196,5 +197,111 @@ fn strip_spaces(fen: String) -> String {
   case fen {
     " " <> fen -> strip_spaces(fen)
     _ -> fen
+  }
+}
+
+pub type FenParseError {
+  PiecePositionsIncomplete
+  ExpectedActiveColour
+  ExpectedSpaceAfterSegment
+  TrailingData(String)
+  ExpectedEnPassantPosition
+  ExpectedHalfMoveCount
+  ExpectedFullMoveCount
+  DuplicateCastlingIndicator
+}
+
+pub fn try_from_fen(fen: String) -> Result(Game, FenParseError) {
+  let fen = strip_spaces(fen)
+
+  let #(board, fen, completed) = board.from_fen(fen)
+  use <- bool.guard(!completed, Error(PiecePositionsIncomplete))
+  use fen <- result.try(expect_spaces(fen))
+
+  use #(to_move, fen) <- result.try(case fen {
+    "w" <> fen | "W" <> fen -> Ok(#(White, fen))
+    "b" <> fen | "B" <> fen -> Ok(#(Black, fen))
+    _ -> Error(ExpectedActiveColour)
+  })
+  use fen <- result.try(expect_spaces(fen))
+
+  use #(castling, fen) <- result.try(try_parse_castling(fen))
+  use fen <- result.try(expect_spaces(fen))
+
+  use #(en_passant_square, fen) <- result.try(case fen {
+    "-" <> fen -> Ok(#(None, fen))
+    _ -> {
+      case parse_position(fen) {
+        Ok(#(position, fen)) -> Ok(#(Some(position), fen))
+        Error(Nil) -> Error(ExpectedEnPassantPosition)
+      }
+    }
+  })
+  use fen <- result.try(expect_spaces(fen))
+
+  use #(half_moves, fen) <- result.try(
+    parse_int(fen) |> result.replace_error(ExpectedHalfMoveCount),
+  )
+  use fen <- result.try(expect_spaces(fen))
+
+  use #(full_moves, fen) <- result.try(
+    parse_int(fen) |> result.replace_error(ExpectedFullMoveCount),
+  )
+
+  let fen = strip_spaces(fen)
+  use <- bool.guard(fen != "", Error(TrailingData(fen)))
+
+  let hash_data = hash.generate_data()
+  let piece_tables = piece_table.make_tables()
+  let zobrist_hash = hash.hash(hash_data, board, to_move)
+
+  Ok(Game(
+    board:,
+    to_move:,
+    castling:,
+    en_passant_square:,
+    half_moves:,
+    full_moves:,
+    zobrist_hash:,
+    hash_data:,
+    piece_tables:,
+    previous_positions: dict.new(),
+  ))
+}
+
+fn expect_spaces(fen: String) -> Result(String, FenParseError) {
+  case fen {
+    " " <> fen -> Ok(strip_spaces(fen))
+    _ -> Error(ExpectedSpaceAfterSegment)
+  }
+}
+
+fn try_parse_castling(fen: String) -> Result(#(Castling, String), FenParseError) {
+  let castling = Castling(False, False, False, False)
+  case fen {
+    "-" <> fen -> Ok(#(castling, fen))
+    _ -> try_parse_castling_loop(fen, castling)
+  }
+}
+
+fn try_parse_castling_loop(
+  fen: String,
+  castling: Castling,
+) -> Result(#(Castling, String), FenParseError) {
+  case fen {
+    "K" <> _ if castling.white_kingside -> Error(DuplicateCastlingIndicator)
+    "k" <> _ if castling.black_kingside -> Error(DuplicateCastlingIndicator)
+    "Q" <> _ if castling.white_queenside -> Error(DuplicateCastlingIndicator)
+    "q" <> _ if castling.black_queenside -> Error(DuplicateCastlingIndicator)
+
+    "K" <> fen ->
+      try_parse_castling_loop(fen, Castling(..castling, white_kingside: True))
+    "k" <> fen ->
+      try_parse_castling_loop(fen, Castling(..castling, black_kingside: True))
+    "Q" <> fen ->
+      try_parse_castling_loop(fen, Castling(..castling, white_queenside: True))
+    "q" <> fen ->
+      try_parse_castling_loop(fen, Castling(..castling, black_queenside: True))
+    _ -> Ok(#(castling, fen))
   }
 }

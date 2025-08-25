@@ -9,8 +9,13 @@ pub const starting_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0
 /// Parses a game from a FEN string. This function does a best-effort parsing of
 /// the input, meaning if a FEN string is partially incomplete (e.g. missing the
 /// half-move and full-move counters at the end), it will fill it in with the
-/// default values of the starting position. For example, the following
-/// expressions are all equivalent:
+/// default values of the starting position.
+/// 
+/// For strict parsing, see [`try_from_fen`](#try_from_fen).
+/// 
+/// ## Examples
+/// 
+/// The following expressions are all equivalent:
 /// 
 /// ```
 /// starfish.new()
@@ -21,6 +26,50 @@ pub const starting_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0
 /// ```
 pub fn from_fen(fen: String) -> Game {
   game.from_fen(fen)
+}
+
+pub type FenParseError {
+  PiecePositionsIncomplete
+  ExpectedActiveColour
+  ExpectedSpaceAfterSegment
+  TrailingData(String)
+  ExpectedEnPassantPosition
+  ExpectedHalfMoveCount
+  ExpectedFullMoveCount
+  DuplicateCastlingIndicator
+}
+
+/// Tries to parse a game from a FEN string, returning an error if it doesn't
+/// follow standard FEN notation. For more lenient parsing, see [`from_fen`](
+/// #from_fen).
+/// 
+/// ## Examples
+/// 
+/// ```
+/// let assert Ok(start_pos) = starfish.try_from_fen(starfish.starting_fen)
+/// assert start_pos == starfish.new()
+/// 
+/// let assert Error(starfish.ExpectedSpaceAfterSegment) =
+///   starfish.try_from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR")
+/// ```
+pub fn try_from_fen(fen: String) -> Result(Game, FenParseError) {
+  result.map_error(game.try_from_fen(fen), convert_fen_parse_error)
+}
+
+// Since circular imports are not allowed, but we want the user to be able to
+// pattern match on the type from the internal module, we convert it here to an
+// identical type which is part of the public API.
+fn convert_fen_parse_error(error: game.FenParseError) -> FenParseError {
+  case error {
+    game.DuplicateCastlingIndicator -> DuplicateCastlingIndicator
+    game.ExpectedActiveColour -> ExpectedActiveColour
+    game.ExpectedEnPassantPosition -> ExpectedEnPassantPosition
+    game.ExpectedFullMoveCount -> ExpectedFullMoveCount
+    game.ExpectedHalfMoveCount -> ExpectedHalfMoveCount
+    game.ExpectedSpaceAfterSegment -> ExpectedSpaceAfterSegment
+    game.PiecePositionsIncomplete -> PiecePositionsIncomplete
+    game.TrailingData(value) -> TrailingData(value)
+  }
 }
 
 /// Returns a game representing the initial position.

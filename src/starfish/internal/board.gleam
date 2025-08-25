@@ -39,7 +39,7 @@ pub fn rank(position: Int) -> Int {
   position / 8
 }
 
-pub fn from_fen(fen: String) -> #(Board, String) {
+pub fn from_fen(fen: String) -> #(Board, String, Bool) {
   // FEN starts from black's size, which means that `rank` needs to start at the
   // end of the board.
   from_fen_loop(fen, 0, side_length - 1, iv.repeat(Empty, size))
@@ -50,7 +50,7 @@ fn from_fen_loop(
   file: Int,
   rank: Int,
   board: iv.Array(Square),
-) -> #(Board, String) {
+) -> #(Board, String, Bool) {
   let position = position(file:, rank:)
 
   case fen {
@@ -151,7 +151,9 @@ fn from_fen_loop(
         rank,
         iv.try_set(board, position, Occupied(Pawn(Black))),
       )
-    _ -> #(Board(board), fen)
+    // Since we iterate the rank in reverse order, but we iterate the file in
+    // ascending order, the final position should equal to `side_length`
+    _ -> #(Board(board), fen, position == side_length)
   }
 }
 
