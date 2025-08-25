@@ -6,11 +6,25 @@ pub type Game =
 
 pub const starting_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
-pub fn new(fen: String) -> Result(Game, Nil) {
-  todo
+/// Parses a game from a FEN string. This function does a best-effort parsing of
+/// the input, meaning if a FEN string is partially incomplete (e.g. missing the
+/// half-move and full-move counters at the end), it will fill it in with the
+/// default values of the starting position. For example, the following
+/// expressions are all equivalent:
+/// 
+/// ```
+/// starfish.new()
+/// starfish.from_fen(starfish.starting_fen)
+/// // Here, we provide the board position and the rest of the information is
+/// // filled in.
+/// starfish.from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR")
+/// ```
+pub fn from_fen(fen: String) -> Game {
+  game.from_fen(fen)
 }
 
-pub fn initial_position() -> Game {
+/// Returns a game representing the initial position.
+pub fn new() -> Game {
   game.initial_position()
 }
 
