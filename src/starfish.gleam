@@ -4,6 +4,8 @@ import starfish/internal/game
 pub type Game =
   game.Game
 
+/// The [FEN string](https://en.wikipedia.org/wiki/Forsyth%E2%80%93Edwards_Notation)
+/// representing the initial position of a chess game.
 pub const starting_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 
 /// Parses a game from a FEN string. This function does a best-effort parsing of
@@ -29,13 +31,29 @@ pub fn from_fen(fen: String) -> Game {
 }
 
 pub type FenParseError {
+  /// The field specifying the positions of piece on the board is incomplete and
+  /// doesn't cover every square on the chessboard. For example, in the string
+  /// `rnbqkbnr/8/8/8/8/RNBQKBNR w - - 0 1`, only 6 ranks are specified, which
+  /// would cause this error.
   PiecePositionsIncomplete
+  /// The field specifying which player's turn is next is wrong or missing. For
+  /// example in the string `8/8/8/8/8/8/8/8 - - 0 1`, the active colour specifier
+  /// is missing.
   ExpectedActiveColour
+  /// If a segment is not followed by a space. For example in the string:
+  /// `8/8/8/8/8/8/8/8w--01`
   ExpectedSpaceAfterSegment
+  /// After the FEN string is successfully parsed, there is extra data at the
+  /// end of the string (whitespace doesn't count).
   TrailingData(String)
+  /// The field specifying the en passant square is missing.
   ExpectedEnPassantPosition
+  /// The field specifying the half-move count is missing.
   ExpectedHalfMoveCount
+  /// The field specifying the full-move count is missing.
   ExpectedFullMoveCount
+  /// When specifying castling rights, one of the characters is duplicated. For
+  /// example, in the string `8/8/8/8/8/8/8/8 w KKKQQQkkqq - 0 1`.
   DuplicateCastlingIndicator
 }
 
