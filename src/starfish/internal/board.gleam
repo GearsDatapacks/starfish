@@ -1,3 +1,5 @@
+import gleam/bool
+import gleam/int
 import iv
 
 pub const side_length = 8
@@ -154,6 +156,60 @@ fn from_fen_loop(
     // Since we iterate the rank in reverse order, but we iterate the file in
     // ascending order, the final position should equal to `side_length`
     _ -> #(Board(board), fen, position == side_length)
+  }
+}
+
+pub fn to_fen(board: Board) -> String {
+  do_to_fen(board.squares, 0, side_length - 1, 0, "")
+}
+
+fn do_to_fen(
+  board: iv.Array(Square),
+  file: Int,
+  rank: Int,
+  empty: Int,
+  fen: String,
+) -> String {
+  use <- bool.lazy_guard(file >= side_length, fn() {
+    case rank == 0 {
+      True -> maybe_add_empty(fen, empty)
+      False ->
+        do_to_fen(board, 0, rank - 1, 0, maybe_add_empty(fen, empty) <> "/")
+    }
+  })
+
+  let position = position(file:, rank:)
+
+  case iv.get(board, position) {
+    Ok(Empty) -> do_to_fen(board, file + 1, rank, empty + 1, fen)
+    Ok(Occupied(piece)) -> {
+      let fen = maybe_add_empty(fen, empty)
+
+      let fen = case piece {
+        Bishop(White) -> fen <> "B"
+        King(White) -> fen <> "K"
+        Knight(White) -> fen <> "N"
+        Pawn(White) -> fen <> "P"
+        Queen(White) -> fen <> "Q"
+        Rook(White) -> fen <> "R"
+        Bishop(Black) -> fen <> "b"
+        King(Black) -> fen <> "k"
+        Knight(Black) -> fen <> "n"
+        Pawn(Black) -> fen <> "p"
+        Queen(Black) -> fen <> "q"
+        Rook(Black) -> fen <> "r"
+      }
+
+      do_to_fen(board, file + 1, rank, 0, fen)
+    }
+    Error(Nil) -> maybe_add_empty(fen, empty)
+  }
+}
+
+fn maybe_add_empty(fen: String, empty: Int) -> String {
+  case empty {
+    0 -> fen
+    _ -> fen <> int.to_string(empty)
   }
 }
 

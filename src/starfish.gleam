@@ -19,7 +19,7 @@ pub const starting_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0
 /// 
 /// The following expressions are all equivalent:
 /// 
-/// ```
+/// ```gleam
 /// starfish.new()
 /// starfish.from_fen(starfish.starting_fen)
 /// // Here, we provide the board position and the rest of the information is
@@ -63,7 +63,7 @@ pub type FenParseError {
 /// 
 /// ## Examples
 /// 
-/// ```
+/// ```gleam
 /// let assert Ok(start_pos) = starfish.try_from_fen(starfish.starting_fen)
 /// assert start_pos == starfish.new()
 /// 
@@ -95,6 +95,17 @@ pub fn new() -> Game {
   game.initial_position()
 }
 
+/// Convert a game into its FEN string representation.
+/// 
+/// ## Examples
+/// 
+/// ```gleam
+/// assert starfish.to_fen(starfish.new()) == starfish.starting_fen
+/// ```
+pub fn to_fen(game: Game) -> String {
+  game.to_fen(game)
+}
+
 pub type Valid
 
 pub type Legal
@@ -110,10 +121,6 @@ pub fn search(game: Game, to_depth depth: Int) -> Result(Move(Legal), Nil) {
 }
 
 pub fn apply(game: Game, move: Move(Legal)) -> Game {
-  todo
-}
-
-pub fn to_fen(game: Game) -> String {
   todo
 }
 

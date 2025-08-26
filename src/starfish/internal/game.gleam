@@ -1,7 +1,9 @@
 import gleam/bool
 import gleam/dict.{type Dict}
+import gleam/int
 import gleam/option.{type Option, None, Some}
 import gleam/result
+import gleam/string
 import starfish/internal/board.{Black, White}
 import starfish/internal/hash
 import starfish/internal/piece_table
@@ -316,5 +318,67 @@ fn try_parse_castling_loop(
     "q" <> fen ->
       try_parse_castling_loop(fen, Castling(..castling, black_queenside: True))
     _ -> Ok(#(castling, fen))
+  }
+}
+
+pub fn to_fen(game: Game) -> String {
+  let board_fen = board.to_fen(game.board)
+
+  let active_colour = case game.to_move {
+    Black -> "b"
+    White -> "w"
+  }
+  let castling = castling_to_string(game.castling)
+  let en_passant = case game.en_passant_square {
+    None -> "-"
+    Some(position) -> position_to_string(position)
+  }
+  let half_moves = int.to_string(game.half_moves)
+  let full_moves = int.to_string(game.full_moves)
+
+  string.join(
+    [board_fen, active_colour, castling, en_passant, half_moves, full_moves],
+    " ",
+  )
+}
+
+fn position_to_string(position: Int) -> String {
+  let rank = int.to_string(board.rank(position))
+
+  let file = case board.file(position) {
+    0 -> "a"
+    1 -> "b"
+    2 -> "c"
+    3 -> "d"
+    4 -> "e"
+    5 -> "f"
+    6 -> "g"
+    _ -> "h"
+  }
+
+  file <> rank
+}
+
+fn castling_to_string(castling: Castling) -> String {
+  let string = case castling.white_kingside {
+    True -> "K"
+    False -> ""
+  }
+  let string = case castling.white_queenside {
+    True -> string <> "Q"
+    False -> string
+  }
+  let string = case castling.black_kingside {
+    True -> string <> "k"
+    False -> string
+  }
+  let string = case castling.black_queenside {
+    True -> string <> "q"
+    False -> string
+  }
+
+  case string {
+    "" -> "-"
+    _ -> string
   }
 }
