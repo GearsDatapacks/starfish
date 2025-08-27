@@ -1,8 +1,21 @@
 import gleam/result
 import starfish/internal/game
+import starfish/internal/move
 
 pub type Game =
   game.Game
+
+/// A single move on the chess board. `Move(Legal)` represents a move which has
+/// been verified to be legal for a particular position. `Move(Valid)` is a move
+/// which is syntactically valid, but is not necessarily legal to play.
+pub type Move(validity) =
+  move.Move(validity)
+
+pub type Legal =
+  move.Legal
+
+pub type Valid =
+  move.Valid
 
 /// The [FEN string](https://en.wikipedia.org/wiki/Forsyth%E2%80%93Edwards_Notation)
 /// representing the initial position of a chess game.
@@ -105,12 +118,6 @@ pub fn new() -> Game {
 pub fn to_fen(game: Game) -> String {
   game.to_fen(game)
 }
-
-pub type Valid
-
-pub type Legal
-
-pub type Move(validity)
 
 pub fn legal_moves(game: Game) -> List(Move(Legal)) {
   todo
