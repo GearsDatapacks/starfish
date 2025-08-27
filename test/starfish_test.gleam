@@ -6,20 +6,31 @@ pub fn main() -> Nil {
   gleeunit.main()
 }
 
+// Ignore `HashData` and `PieceTables` as they are not relevant to the state of
+// the board.
+fn game_equal(a: game.Game, b: game.Game) -> Bool {
+  a.board == b.board
+  && a.to_move == b.to_move
+  && a.castling == b.castling
+  && a.en_passant_square == b.en_passant_square
+  && a.half_moves == b.half_moves
+  && a.full_moves == b.full_moves
+}
+
 pub fn from_fen_test() {
   let initial = starfish.new()
   let parsed = starfish.from_fen(starfish.starting_fen)
-  assert initial == parsed
+  assert game_equal(initial, parsed)
 
   let initial_with_only_position = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"
   let parsed = starfish.from_fen(initial_with_only_position)
-  assert initial == parsed
+  assert game_equal(initial, parsed)
 }
 
 pub fn try_from_fen_test() {
   let initial = starfish.new()
   let assert Ok(parsed) = starfish.try_from_fen(starfish.starting_fen)
-  assert parsed == initial
+  assert game_equal(parsed, initial)
 
   let initial_with_only_position = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"
   let assert Error(error) = starfish.try_from_fen(initial_with_only_position)
