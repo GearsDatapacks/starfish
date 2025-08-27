@@ -159,14 +159,15 @@ fn parse_position(fen: String) -> Result(#(Int, String), Nil) {
   })
 
   use #(rank, fen) <- result.try(case fen {
-    "0" <> fen -> Ok(#(0, fen))
-    "1" <> fen -> Ok(#(1, fen))
-    "2" <> fen -> Ok(#(2, fen))
-    "3" <> fen -> Ok(#(3, fen))
-    "4" <> fen -> Ok(#(4, fen))
-    "5" <> fen -> Ok(#(5, fen))
-    "6" <> fen -> Ok(#(6, fen))
-    "7" <> fen -> Ok(#(7, fen))
+    // We subtract one from the digit because we use zero-indexed positions
+    "1" <> fen -> Ok(#(0, fen))
+    "2" <> fen -> Ok(#(1, fen))
+    "3" <> fen -> Ok(#(2, fen))
+    "4" <> fen -> Ok(#(3, fen))
+    "5" <> fen -> Ok(#(4, fen))
+    "6" <> fen -> Ok(#(5, fen))
+    "7" <> fen -> Ok(#(6, fen))
+    "8" <> fen -> Ok(#(7, fen))
     _ -> Error(Nil)
   })
 
@@ -343,7 +344,8 @@ pub fn to_fen(game: Game) -> String {
 }
 
 fn position_to_string(position: Int) -> String {
-  let rank = int.to_string(board.rank(position))
+  // Add one, because file/rank is zero-indexed
+  let rank = int.to_string(board.rank(position) + 1)
 
   let file = case board.file(position) {
     0 -> "a"
