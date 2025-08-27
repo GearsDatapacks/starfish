@@ -41,7 +41,7 @@ pub fn initial_position() -> Game {
   let hash_data = hash.generate_data()
   let piece_tables = piece_table.construct_tables()
   let board = board.initial_position()
-  let zobrist_hash = hash.hash(hash_data, board.squares, to_move)
+  let zobrist_hash = hash.hash(hash_data, board, to_move)
 
   Game(
     board:,
@@ -97,7 +97,7 @@ pub fn from_fen(fen: String) -> Game {
 
   let hash_data = hash.generate_data()
   let piece_tables = piece_table.construct_tables()
-  let zobrist_hash = hash.hash(hash_data, board.squares, to_move)
+  let zobrist_hash = hash.hash(hash_data, board, to_move)
 
   Game(
     board:,
@@ -269,7 +269,7 @@ pub fn try_from_fen(fen: String) -> Result(Game, FenParseError) {
 
   let hash_data = hash.generate_data()
   let piece_tables = piece_table.construct_tables()
-  let zobrist_hash = hash.hash(hash_data, board.squares, to_move)
+  let zobrist_hash = hash.hash(hash_data, board, to_move)
 
   Ok(Game(
     board:,

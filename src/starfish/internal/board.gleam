@@ -6,9 +6,8 @@ pub const side_length = 8
 
 pub const size = 64
 
-pub type Board {
-  Board(squares: iv.Array(Square))
-}
+pub type Board =
+  iv.Array(Square)
 
 pub type Square {
   Empty
@@ -155,12 +154,12 @@ fn from_fen_loop(
       )
     // Since we iterate the rank in reverse order, but we iterate the file in
     // ascending order, the final position should equal to `side_length`
-    _ -> #(Board(board), fen, position == side_length)
+    _ -> #(board, fen, position == side_length)
   }
 }
 
 pub fn to_fen(board: Board) -> String {
-  do_to_fen(board.squares, 0, side_length - 1, 0, "")
+  do_to_fen(board, 0, side_length - 1, 0, "")
 }
 
 fn do_to_fen(
@@ -214,7 +213,7 @@ fn maybe_add_empty(fen: String, empty: Int) -> String {
 }
 
 pub fn initial_position() -> Board {
-  Board(iv.from_list(initial_squares))
+  iv.from_list(initial_squares)
 }
 
 const initial_squares = [
