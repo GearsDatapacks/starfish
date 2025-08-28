@@ -1,3 +1,4 @@
+import gleam/bool
 import iv
 import starfish/internal/board
 import starfish/internal/direction.{type Direction}
@@ -59,17 +60,19 @@ fn pawn_moves(
   let forward_one = direction.in_direction(position, forward)
   let moves = case iv.get(game.board, forward_one) {
     Ok(board.Empty) -> {
+      let moves = [Move(from: position, to: forward_one), ..moves]
+
+      let can_double_move = case game.to_move, board.rank(position) {
+        board.Black, 6 | board.White, 1 -> True
+        _, _ -> False
+      }
+
+      use <- bool.guard(!can_double_move, moves)
+
       let forward_two = direction.in_direction(forward_one, forward)
       case iv.get(game.board, forward_two) {
-        Ok(board.Empty) -> [
-          Move(from: position, to: forward_one),
-          Move(from: position, to: forward_two),
-          ..moves
-        ]
-        Ok(board.Occupied(_)) | Error(_) -> [
-          Move(from: position, to: forward_one),
-          ..moves
-        ]
+        Ok(board.Empty) -> [Move(from: position, to: forward_two), ..moves]
+        Ok(board.Occupied(_)) | Error(_) -> moves
       }
     }
     Ok(board.Occupied(_)) | Error(_) -> moves
