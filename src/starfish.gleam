@@ -120,7 +120,7 @@ pub fn to_fen(game: Game) -> String {
 }
 
 pub fn legal_moves(game: Game) -> List(Move(Legal)) {
-  todo
+  move.legal(game)
 }
 
 pub fn search(game: Game, to_depth depth: Int) -> Result(Move(Legal), Nil) {
