@@ -59,7 +59,8 @@ pub fn hash(
   iv.index_fold(board, hash, fn(hash, square, position) {
     case square {
       board.Empty -> hash
-      board.Occupied(piece) -> toggle_hash_square(hash, position, piece, data)
+      board.Occupied(piece:, colour:) ->
+        toggle_hash_square(hash, position, piece, colour, data)
     }
   })
 }
@@ -68,21 +69,22 @@ fn toggle_hash_square(
   hash: Int,
   position: Int,
   piece: board.Piece,
+  colour: board.Colour,
   data: HashData,
 ) -> Int {
-  let piece_index = case piece {
-    board.Pawn(board.White) -> white_pawn
-    board.Bishop(board.White) -> white_bishop
-    board.King(board.White) -> white_king
-    board.Knight(board.White) -> white_knight
-    board.Queen(board.White) -> white_queen
-    board.Rook(board.White) -> white_rook
-    board.Bishop(board.Black) -> black_bishop
-    board.King(board.Black) -> black_king
-    board.Knight(board.Black) -> black_knight
-    board.Pawn(board.Black) -> black_pawn
-    board.Queen(board.Black) -> black_queen
-    board.Rook(board.Black) -> black_rook
+  let piece_index = case piece, colour {
+    board.Pawn, board.White -> white_pawn
+    board.Bishop, board.White -> white_bishop
+    board.King, board.White -> white_king
+    board.Knight, board.White -> white_knight
+    board.Queen, board.White -> white_queen
+    board.Rook, board.White -> white_rook
+    board.Bishop, board.Black -> black_bishop
+    board.King, board.Black -> black_king
+    board.Knight, board.Black -> black_knight
+    board.Pawn, board.Black -> black_pawn
+    board.Queen, board.Black -> black_queen
+    board.Rook, board.Black -> black_rook
   }
   let index = position * num_pieces + piece_index
   int.bitwise_exclusive_or(iv.get_or_default(data.table, index, 0), hash)

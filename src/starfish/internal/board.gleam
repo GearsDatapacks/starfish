@@ -11,16 +11,16 @@ pub type Board =
 
 pub type Square {
   Empty
-  Occupied(Piece)
+  Occupied(piece: Piece, colour: Colour)
 }
 
 pub type Piece {
-  Pawn(colour: Colour)
-  Bishop(colour: Colour)
-  Knight(colour: Colour)
-  Rook(colour: Colour)
-  Queen(colour: Colour)
-  King(colour: Colour)
+  Pawn
+  Bishop
+  Knight
+  Rook
+  Queen
+  King
 }
 
 pub type Colour {
@@ -73,84 +73,84 @@ fn from_fen_loop(
         fen,
         file + 1,
         rank,
-        iv.try_set(board, position, Occupied(King(White))),
+        iv.try_set(board, position, Occupied(King, White)),
       )
     "Q" <> fen ->
       from_fen_loop(
         fen,
         file + 1,
         rank,
-        iv.try_set(board, position, Occupied(Queen(White))),
+        iv.try_set(board, position, Occupied(Queen, White)),
       )
     "B" <> fen ->
       from_fen_loop(
         fen,
         file + 1,
         rank,
-        iv.try_set(board, position, Occupied(Bishop(White))),
+        iv.try_set(board, position, Occupied(Bishop, White)),
       )
     "N" <> fen ->
       from_fen_loop(
         fen,
         file + 1,
         rank,
-        iv.try_set(board, position, Occupied(Knight(White))),
+        iv.try_set(board, position, Occupied(Knight, White)),
       )
     "R" <> fen ->
       from_fen_loop(
         fen,
         file + 1,
         rank,
-        iv.try_set(board, position, Occupied(Rook(White))),
+        iv.try_set(board, position, Occupied(Rook, White)),
       )
     "P" <> fen ->
       from_fen_loop(
         fen,
         file + 1,
         rank,
-        iv.try_set(board, position, Occupied(Pawn(White))),
+        iv.try_set(board, position, Occupied(Pawn, White)),
       )
     "k" <> fen ->
       from_fen_loop(
         fen,
         file + 1,
         rank,
-        iv.try_set(board, position, Occupied(King(Black))),
+        iv.try_set(board, position, Occupied(King, Black)),
       )
     "q" <> fen ->
       from_fen_loop(
         fen,
         file + 1,
         rank,
-        iv.try_set(board, position, Occupied(Queen(Black))),
+        iv.try_set(board, position, Occupied(Queen, Black)),
       )
     "b" <> fen ->
       from_fen_loop(
         fen,
         file + 1,
         rank,
-        iv.try_set(board, position, Occupied(Bishop(Black))),
+        iv.try_set(board, position, Occupied(Bishop, Black)),
       )
     "n" <> fen ->
       from_fen_loop(
         fen,
         file + 1,
         rank,
-        iv.try_set(board, position, Occupied(Knight(Black))),
+        iv.try_set(board, position, Occupied(Knight, Black)),
       )
     "r" <> fen ->
       from_fen_loop(
         fen,
         file + 1,
         rank,
-        iv.try_set(board, position, Occupied(Rook(Black))),
+        iv.try_set(board, position, Occupied(Rook, Black)),
       )
     "p" <> fen ->
       from_fen_loop(
         fen,
         file + 1,
         rank,
-        iv.try_set(board, position, Occupied(Pawn(Black))),
+        iv.try_set(board, position, Occupied(Pawn, Black)),
       )
     // Since we iterate the rank in reverse order, but we iterate the file in
     // ascending order, the final position should equal to `side_length`
@@ -181,22 +181,22 @@ fn do_to_fen(
 
   case iv.get(board, position) {
     Ok(Empty) -> do_to_fen(board, file + 1, rank, empty + 1, fen)
-    Ok(Occupied(piece)) -> {
+    Ok(Occupied(piece:, colour:)) -> {
       let fen = maybe_add_empty(fen, empty)
 
-      let fen = case piece {
-        Bishop(White) -> fen <> "B"
-        King(White) -> fen <> "K"
-        Knight(White) -> fen <> "N"
-        Pawn(White) -> fen <> "P"
-        Queen(White) -> fen <> "Q"
-        Rook(White) -> fen <> "R"
-        Bishop(Black) -> fen <> "b"
-        King(Black) -> fen <> "k"
-        Knight(Black) -> fen <> "n"
-        Pawn(Black) -> fen <> "p"
-        Queen(Black) -> fen <> "q"
-        Rook(Black) -> fen <> "r"
+      let fen = case piece, colour {
+        Bishop, White -> fen <> "B"
+        King, White -> fen <> "K"
+        Knight, White -> fen <> "N"
+        Pawn, White -> fen <> "P"
+        Queen, White -> fen <> "Q"
+        Rook, White -> fen <> "R"
+        Bishop, Black -> fen <> "b"
+        King, Black -> fen <> "k"
+        Knight, Black -> fen <> "n"
+        Pawn, Black -> fen <> "p"
+        Queen, Black -> fen <> "q"
+        Rook, Black -> fen <> "r"
       }
 
       do_to_fen(board, file + 1, rank, 0, fen)
@@ -217,22 +217,22 @@ pub fn initial_position() -> Board {
 }
 
 const initial_squares = [
-  Occupied(Rook(White)),
-  Occupied(Knight(White)),
-  Occupied(Bishop(White)),
-  Occupied(Queen(White)),
-  Occupied(King(White)),
-  Occupied(Bishop(White)),
-  Occupied(Knight(White)),
-  Occupied(Rook(White)),
-  Occupied(Pawn(White)),
-  Occupied(Pawn(White)),
-  Occupied(Pawn(White)),
-  Occupied(Pawn(White)),
-  Occupied(Pawn(White)),
-  Occupied(Pawn(White)),
-  Occupied(Pawn(White)),
-  Occupied(Pawn(White)),
+  Occupied(Rook, White),
+  Occupied(Knight, White),
+  Occupied(Bishop, White),
+  Occupied(Queen, White),
+  Occupied(King, White),
+  Occupied(Bishop, White),
+  Occupied(Knight, White),
+  Occupied(Rook, White),
+  Occupied(Pawn, White),
+  Occupied(Pawn, White),
+  Occupied(Pawn, White),
+  Occupied(Pawn, White),
+  Occupied(Pawn, White),
+  Occupied(Pawn, White),
+  Occupied(Pawn, White),
+  Occupied(Pawn, White),
   Empty,
   Empty,
   Empty,
@@ -265,20 +265,20 @@ const initial_squares = [
   Empty,
   Empty,
   Empty,
-  Occupied(Pawn(Black)),
-  Occupied(Pawn(Black)),
-  Occupied(Pawn(Black)),
-  Occupied(Pawn(Black)),
-  Occupied(Pawn(Black)),
-  Occupied(Pawn(Black)),
-  Occupied(Pawn(Black)),
-  Occupied(Pawn(Black)),
-  Occupied(Rook(Black)),
-  Occupied(Knight(Black)),
-  Occupied(Bishop(Black)),
-  Occupied(Queen(Black)),
-  Occupied(King(Black)),
-  Occupied(Bishop(Black)),
-  Occupied(Knight(Black)),
-  Occupied(Rook(Black)),
+  Occupied(Pawn, Black),
+  Occupied(Pawn, Black),
+  Occupied(Pawn, Black),
+  Occupied(Pawn, Black),
+  Occupied(Pawn, Black),
+  Occupied(Pawn, Black),
+  Occupied(Pawn, Black),
+  Occupied(Pawn, Black),
+  Occupied(Rook, Black),
+  Occupied(Knight, Black),
+  Occupied(Bishop, Black),
+  Occupied(Queen, Black),
+  Occupied(King, Black),
+  Occupied(Bishop, Black),
+  Occupied(Knight, Black),
+  Occupied(Rook, Black),
 ]

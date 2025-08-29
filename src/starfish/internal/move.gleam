@@ -20,9 +20,9 @@ pub fn legal(game: Game) -> List(Move(Legal)) {
   use moves, square, position <- iv.index_fold(game.board, [])
 
   case square {
-    board.Occupied(piece) if piece.colour == game.to_move ->
+    board.Occupied(piece:, colour:) if colour == game.to_move ->
       moves_for_piece(game, position, piece, moves)
-    board.Occupied(_) | board.Empty -> moves
+    board.Occupied(_, _) | board.Empty -> moves
   }
 }
 
@@ -33,17 +33,16 @@ fn moves_for_piece(
   moves: List(Move(Legal)),
 ) -> List(Move(Legal)) {
   case piece {
-    board.Bishop(_) ->
+    board.Bishop ->
       sliding_moves(game, position, moves, direction.bishop_directions)
-    board.Rook(_) ->
+    board.Rook ->
       sliding_moves(game, position, moves, direction.rook_directions)
-    board.Queen(_) ->
+    board.Queen ->
       sliding_moves(game, position, moves, direction.queen_directions)
-    board.King(_) ->
-      king_moves(game, position, moves, direction.queen_directions)
-    board.Knight(_) ->
+    board.King -> king_moves(game, position, moves, direction.queen_directions)
+    board.Knight ->
       knight_moves(game, position, moves, direction.knight_directions)
-    board.Pawn(_) -> pawn_moves(game, position, moves)
+    board.Pawn -> pawn_moves(game, position, moves)
   }
 }
 
@@ -72,28 +71,28 @@ fn pawn_moves(
       let forward_two = direction.in_direction(forward_one, forward)
       case iv.get(game.board, forward_two) {
         Ok(board.Empty) -> [Move(from: position, to: forward_two), ..moves]
-        Ok(board.Occupied(_)) | Error(_) -> moves
+        Ok(board.Occupied(_, _)) | Error(_) -> moves
       }
     }
-    Ok(board.Occupied(_)) | Error(_) -> moves
+    Ok(board.Occupied(_, _)) | Error(_) -> moves
   }
 
   let new_position = direction.in_direction(position, left)
   let moves = case iv.get(game.board, new_position) {
-    Ok(board.Occupied(piece)) if piece.colour != game.to_move -> [
+    Ok(board.Occupied(colour:, ..)) if colour != game.to_move -> [
       Capture(from: position, to: new_position),
       ..moves
     ]
-    Ok(board.Empty) | Ok(board.Occupied(_)) | Error(_) -> moves
+    Ok(board.Empty) | Ok(board.Occupied(_, _)) | Error(_) -> moves
   }
 
   let new_position = direction.in_direction(position, right)
   case iv.get(game.board, new_position) {
-    Ok(board.Occupied(piece)) if piece.colour != game.to_move -> [
+    Ok(board.Occupied(colour:, ..)) if colour != game.to_move -> [
       Capture(from: position, to: new_position),
       ..moves
     ]
-    Ok(board.Empty) | Ok(board.Occupied(_)) | Error(_) -> moves
+    Ok(board.Empty) | Ok(board.Occupied(_, _)) | Error(_) -> moves
   }
 }
 
@@ -109,11 +108,11 @@ fn knight_moves(
       let new_position = direction.in_direction(position, direction)
       let moves = case iv.get(game.board, new_position) {
         Ok(board.Empty) -> [Move(from: position, to: new_position), ..moves]
-        Ok(board.Occupied(piece)) if piece.colour != game.to_move -> [
+        Ok(board.Occupied(colour:, ..)) if colour != game.to_move -> [
           Capture(from: position, to: new_position),
           ..moves
         ]
-        Ok(board.Occupied(_)) | Error(_) -> moves
+        Ok(board.Occupied(_, _)) | Error(_) -> moves
       }
 
       knight_moves(game, position, moves, directions)
@@ -133,11 +132,11 @@ fn king_moves(
       let new_position = direction.in_direction(position, direction)
       let moves = case iv.get(game.board, new_position) {
         Ok(board.Empty) -> [Move(from: position, to: new_position), ..moves]
-        Ok(board.Occupied(piece)) if piece.colour != game.to_move -> [
+        Ok(board.Occupied(colour:, ..)) if colour != game.to_move -> [
           Capture(from: position, to: new_position),
           ..moves
         ]
-        Ok(board.Occupied(_)) | Error(_) -> moves
+        Ok(board.Occupied(_, _)) | Error(_) -> moves
       }
 
       king_moves(game, position, moves, directions)
@@ -176,10 +175,10 @@ fn sliding_moves_in_direction(
         Move(from: position, to: new_position),
         ..moves
       ])
-    Ok(board.Occupied(piece)) if piece.colour != game.to_move -> [
+    Ok(board.Occupied(colour:, ..)) if colour != game.to_move -> [
       Capture(from: position, to: new_position),
       ..moves
     ]
-    Ok(board.Occupied(_)) | Error(_) -> moves
+    Ok(board.Occupied(_, _)) | Error(_) -> moves
   }
 }
