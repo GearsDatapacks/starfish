@@ -12,7 +12,12 @@ pub fn in_direction(position: Int, direction: Direction) -> Int {
   let file = board.file(position) + direction.file_change
   let rank = board.rank(position) + direction.rank_change
 
-  case file >= board.side_length || rank >= board.side_length {
+  case
+    file >= board.side_length
+    || rank >= board.side_length
+    || file < 0
+    || rank < 0
+  {
     True -> -1
     False -> board.position(file:, rank:)
   }
