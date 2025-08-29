@@ -1,8 +1,8 @@
 import gleam/bool
-import gleam/dict.{type Dict}
 import gleam/int
 import gleam/option.{type Option, None, Some}
 import gleam/result
+import gleam/set.{type Set}
 import gleam/string
 import starfish/internal/board.{Black, White}
 import starfish/internal/hash
@@ -30,7 +30,7 @@ pub type Game {
     zobrist_hash: Int,
     hash_data: hash.HashData,
     piece_tables: piece_table.PieceTables,
-    previous_positions: Dict(Int, Int),
+    previous_positions: Set(Int),
   )
 }
 
@@ -53,7 +53,7 @@ pub fn initial_position() -> Game {
     zobrist_hash:,
     hash_data:,
     piece_tables:,
-    previous_positions: dict.new(),
+    previous_positions: set.new(),
   )
 }
 
@@ -109,7 +109,7 @@ pub fn from_fen(fen: String) -> Game {
     zobrist_hash:,
     hash_data:,
     piece_tables:,
-    previous_positions: dict.new(),
+    previous_positions: set.new(),
   )
 }
 
@@ -281,7 +281,7 @@ pub fn try_from_fen(fen: String) -> Result(Game, FenParseError) {
     zobrist_hash:,
     hash_data:,
     piece_tables:,
-    previous_positions: dict.new(),
+    previous_positions: set.new(),
   ))
 }
 

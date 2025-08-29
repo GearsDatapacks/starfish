@@ -127,8 +127,8 @@ pub fn search(game: Game, to_depth depth: Int) -> Result(Move(Legal), Nil) {
   todo
 }
 
-pub fn apply(game: Game, move: Move(Legal)) -> Game {
-  todo
+pub fn apply_move(game: Game, move: Move(Legal)) -> Game {
+  move.apply(game, move)
 }
 
 pub fn to_standard_algebraic_notation(move: Move(a)) -> String {

@@ -1,8 +1,11 @@
 import gleam/bool
+import gleam/option.{type Option, None, Some}
+import gleam/set
 import iv
 import starfish/internal/board
 import starfish/internal/direction.{type Direction}
-import starfish/internal/game.{type Game}
+import starfish/internal/game.{type Game, Game}
+import starfish/internal/hash
 
 pub type Valid
 
@@ -181,4 +184,199 @@ fn sliding_moves_in_direction(
     ]
     Ok(board.Occupied(_, _)) | Error(_) -> moves
   }
+}
+
+pub fn apply(game: Game, move: Move(Legal)) -> game.Game {
+  case move {
+    Capture(from:, to:) -> do_apply(game, from, to, False, None, True)
+    Castle(from:, to:) -> apply_castle(game, from, to, board.file(to) == 2)
+    EnPassant(from:, to:) -> do_apply(game, from, to, True, None, True)
+    Move(from:, to:) -> do_apply(game, from, to, False, None, False)
+    Promotion(from:, to:, piece:) ->
+      do_apply(game, from, to, False, Some(piece), False)
+  }
+}
+
+fn apply_castle(game: Game, from: Int, to: Int, long: Bool) -> Game {
+  let Game(
+    board:,
+    to_move:,
+    castling:,
+    en_passant_square: _,
+    half_moves:,
+    full_moves:,
+    zobrist_hash:,
+    hash_data:,
+    piece_tables:,
+    previous_positions:,
+  ) = game
+
+  let assert board.Occupied(piece:, colour:) =
+    iv.get_or_default(board, from, board.Empty)
+
+  let castling = case colour {
+    board.Black ->
+      game.Castling(..castling, black_kingside: False, black_queenside: False)
+    board.White ->
+      game.Castling(..castling, white_kingside: False, white_queenside: False)
+  }
+
+  let rook_rank = board.rank(from)
+  let #(rook_file_from, rook_file_to) = case long {
+    True -> #(0, 3)
+    False -> #(7, 5)
+  }
+
+  let board =
+    board
+    |> iv.try_set(from, board.Empty)
+    |> iv.try_set(
+      board.position(file: rook_file_from, rank: rook_rank),
+      board.Empty,
+    )
+    |> iv.try_set(to, board.Occupied(piece:, colour:))
+    |> iv.try_set(
+      board.position(file: rook_file_to, rank: rook_rank),
+      board.Occupied(piece: board.Rook, colour:),
+    )
+
+  let en_passant_square = None
+
+  let full_moves = case to_move {
+    board.Black -> full_moves + 1
+    board.White -> full_moves
+  }
+
+  let to_move = case to_move {
+    board.Black -> board.White
+    board.White -> board.Black
+  }
+
+  let half_moves = half_moves + 1
+  let previous_positions = set.insert(previous_positions, zobrist_hash)
+
+  // TODO: Update incrementally
+  let zobrist_hash = hash.hash(hash_data, board, to_move)
+
+  Game(
+    board:,
+    to_move:,
+    castling:,
+    en_passant_square:,
+    half_moves:,
+    full_moves:,
+    zobrist_hash:,
+    hash_data:,
+    piece_tables:,
+    previous_positions:,
+  )
+}
+
+fn do_apply(
+  game: Game,
+  from: Int,
+  to: Int,
+  en_passant: Bool,
+  promotion: Option(board.Piece),
+  capture: Bool,
+) -> Game {
+  let Game(
+    board:,
+    to_move:,
+    castling:,
+    en_passant_square:,
+    half_moves:,
+    full_moves:,
+    zobrist_hash:,
+    hash_data:,
+    piece_tables:,
+    previous_positions:,
+  ) = game
+
+  let assert board.Occupied(piece:, colour:) =
+    iv.get_or_default(board, from, board.Empty)
+
+  let castling = case piece {
+    board.Bishop | board.Knight | board.Pawn | board.Queen -> castling
+    board.King ->
+      case colour {
+        board.Black ->
+          game.Castling(
+            ..castling,
+            black_kingside: False,
+            black_queenside: False,
+          )
+        board.White ->
+          game.Castling(
+            ..castling,
+            white_kingside: False,
+            white_queenside: False,
+          )
+      }
+    board.Rook ->
+      case colour, board.file(from) {
+        board.Black, 0 -> game.Castling(..castling, black_queenside: False)
+        board.Black, 7 -> game.Castling(..castling, black_kingside: False)
+        board.White, 0 -> game.Castling(..castling, white_queenside: False)
+        board.White, 7 -> game.Castling(..castling, white_kingside: False)
+        _, _ -> castling
+      }
+  }
+
+  let one_way_move = capture || piece == board.Pawn
+
+  let piece = case promotion {
+    None -> piece
+    Some(piece) -> piece
+  }
+
+  let board =
+    board
+    |> iv.try_set(from, board.Empty)
+    |> iv.try_set(to, board.Occupied(piece:, colour:))
+
+  let board = case en_passant, en_passant_square, colour {
+    True, Some(square), board.White ->
+      iv.try_set(board, square - 8, board.Empty)
+    True, Some(square), board.Black ->
+      iv.try_set(board, square + 8, board.Empty)
+    _, _, _ -> board
+  }
+
+  let en_passant_square = case piece, to - from {
+    board.Pawn, 16 -> Some(from + 8)
+    board.Pawn, -16 -> Some(from - 8)
+    _, _ -> None
+  }
+
+  let full_moves = case to_move {
+    board.Black -> full_moves + 1
+    board.White -> full_moves
+  }
+
+  let to_move = case to_move {
+    board.Black -> board.White
+    board.White -> board.Black
+  }
+
+  let #(half_moves, previous_positions) = case one_way_move {
+    True -> #(0, set.new())
+    False -> #(half_moves + 1, set.insert(previous_positions, zobrist_hash))
+  }
+
+  // TODO: Update incrementally
+  let zobrist_hash = hash.hash(hash_data, board, to_move)
+
+  Game(
+    board:,
+    to_move:,
+    castling:,
+    en_passant_square:,
+    half_moves:,
+    full_moves:,
+    zobrist_hash:,
+    hash_data:,
+    piece_tables:,
+    previous_positions:,
+  )
 }
