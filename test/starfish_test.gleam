@@ -87,8 +87,7 @@ pub fn perft_initial_position_test_() {
   use <- Timeout(1_000_000)
   use <- pocket_watch.callback("initial position", print_time)
   perft_all(starfish.starting_fen, [
-    20,
-    // 400, 8902, 197_281, 4_865_609, 119_060_324,
+    20, 400, 8902, 197_281, 4_865_609, 119_060_324,
   ])
 }
 

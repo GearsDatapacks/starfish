@@ -159,7 +159,7 @@ fn sliding_moves(
       sliding_moves(
         game,
         position,
-        sliding_moves_in_direction(game, position, direction, moves),
+        sliding_moves_in_direction(game, position, position, direction, moves),
         directions,
       )
   }
@@ -167,6 +167,7 @@ fn sliding_moves(
 
 fn sliding_moves_in_direction(
   game: Game,
+  start_position: Int,
   position: Int,
   direction: Direction,
   moves: List(Move(Legal)),
@@ -174,12 +175,12 @@ fn sliding_moves_in_direction(
   let new_position = direction.in_direction(position, direction)
   case iv.get(game.board, new_position) {
     Ok(board.Empty) ->
-      sliding_moves_in_direction(game, new_position, direction, [
-        Move(from: position, to: new_position),
+      sliding_moves_in_direction(game, start_position, new_position, direction, [
+        Move(from: start_position, to: new_position),
         ..moves
       ])
     Ok(board.Occupied(colour:, ..)) if colour != game.to_move -> [
-      Capture(from: position, to: new_position),
+      Capture(from: start_position, to: new_position),
       ..moves
     ]
     Ok(board.Occupied(_, _)) | Error(_) -> moves
