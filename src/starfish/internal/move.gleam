@@ -3,9 +3,9 @@ import gleam/option.{type Option, None, Some}
 import gleam/set
 import iv
 import starfish/internal/board
-import starfish/internal/direction.{type Direction}
 import starfish/internal/game.{type Game, Game}
 import starfish/internal/hash
+import starfish/internal/move/direction.{type Direction}
 
 pub type Valid
 
