@@ -137,6 +137,47 @@ fn king_moves(
   moves: List(Move(Legal)),
   directions: List(Direction),
 ) -> List(Move(Legal)) {
+  let moves = regular_king_moves(game, position, moves, directions)
+
+  let is_empty = fn(position) {
+    iv.get_or_default(game.board, position, board.Empty) == board.Empty
+  }
+
+  let moves = case game.to_move {
+    board.Black if game.castling.black_kingside ->
+      case is_empty(61) && is_empty(62) {
+        True -> [Castle(from: position, to: 62), ..moves]
+        False -> moves
+      }
+    board.White if game.castling.white_kingside ->
+      case is_empty(5) && is_empty(6) {
+        True -> [Castle(from: position, to: 6), ..moves]
+        False -> moves
+      }
+    _ -> moves
+  }
+
+  case game.to_move {
+    board.Black if game.castling.black_queenside ->
+      case is_empty(59) && is_empty(58) && is_empty(57) {
+        True -> [Castle(from: position, to: 58), ..moves]
+        False -> moves
+      }
+    board.White if game.castling.white_queenside ->
+      case is_empty(3) && is_empty(2) && is_empty(1) {
+        True -> [Castle(from: position, to: 2), ..moves]
+        False -> moves
+      }
+    _ -> moves
+  }
+}
+
+fn regular_king_moves(
+  game: Game,
+  position: Int,
+  moves: List(Move(Legal)),
+  directions: List(Direction),
+) -> List(Move(Legal)) {
   case directions {
     [] -> moves
     [direction, ..directions] -> {
@@ -150,7 +191,7 @@ fn king_moves(
         Ok(board.Occupied(_, _)) | Error(_) -> moves
       }
 
-      king_moves(game, position, moves, directions)
+      regular_king_moves(game, position, moves, directions)
     }
   }
 }
