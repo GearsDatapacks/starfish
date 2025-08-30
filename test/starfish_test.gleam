@@ -182,4 +182,12 @@ pub fn apply_move_test() {
     [move.Promotion(from: 11, to: 2, piece: board.Knight)],
     "rnbqkbnr/pppp1ppp/8/8/8/4P2P/PPP1KPP1/RNnQ1BNR w kq - 0 6",
   )
+
+  // Castling rights are removed if the rook is taken
+  test_apply_move(
+    "rn1qkbnr/pbpppppp/1p6/6P1/8/8/PPPPPP1P/RNBQKBNR b KQkq - 0 3",
+    // b7h1
+    [move.Capture(from: 49, to: 7)],
+    "rn1qkbnr/p1pppppp/1p6/6P1/8/8/PPPPPP1P/RNBQKBNb w Qkq - 0 4",
+  )
 }

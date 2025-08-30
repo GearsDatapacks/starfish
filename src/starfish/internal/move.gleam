@@ -305,32 +305,10 @@ fn do_apply(
   let assert board.Occupied(piece:, colour:) =
     iv.get_or_default(board, from, board.Empty)
 
-  let castling = case piece {
-    board.Bishop | board.Knight | board.Pawn | board.Queen -> castling
-    board.King ->
-      case colour {
-        board.Black ->
-          game.Castling(
-            ..castling,
-            black_kingside: False,
-            black_queenside: False,
-          )
-        board.White ->
-          game.Castling(
-            ..castling,
-            white_kingside: False,
-            white_queenside: False,
-          )
-      }
-    board.Rook ->
-      case colour, board.file(from) {
-        board.Black, 0 -> game.Castling(..castling, black_queenside: False)
-        board.Black, 7 -> game.Castling(..castling, black_kingside: False)
-        board.White, 0 -> game.Castling(..castling, white_queenside: False)
-        board.White, 7 -> game.Castling(..castling, white_kingside: False)
-        _, _ -> castling
-      }
-  }
+  let castling =
+    castling
+    |> remove_castling(from)
+    |> remove_castling(to)
 
   let one_way_move = capture || piece == board.Pawn
 
@@ -388,4 +366,20 @@ fn do_apply(
     piece_tables:,
     previous_positions:,
   )
+}
+
+/// Removes castling rights based on a specific square changing. This works if
+/// the piece (such as a rook or king) moves, or is captured by another piece.
+fn remove_castling(castling: game.Castling, position: Int) -> game.Castling {
+  case position {
+    4 ->
+      game.Castling(..castling, white_kingside: False, white_queenside: False)
+    60 ->
+      game.Castling(..castling, black_kingside: False, black_queenside: False)
+    7 -> game.Castling(..castling, white_kingside: False)
+    63 -> game.Castling(..castling, black_kingside: False)
+    0 -> game.Castling(..castling, white_queenside: False)
+    56 -> game.Castling(..castling, black_queenside: False)
+    _ -> castling
+  }
 }
