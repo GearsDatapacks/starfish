@@ -131,7 +131,7 @@ fn get_sliding_pin_lines(
           king_position,
           direction,
           lines,
-          [],
+          [position],
           -1,
         ),
       )
