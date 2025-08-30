@@ -5,6 +5,7 @@ import iv
 import starfish/internal/board
 import starfish/internal/game.{type Game, Game}
 import starfish/internal/hash
+import starfish/internal/move/attack
 import starfish/internal/move/direction.{type Direction}
 
 pub type Valid
@@ -259,10 +260,12 @@ fn apply_castle(game: Game, from: Int, to: Int, long: Bool) -> Game {
     hash_data:,
     piece_tables:,
     previous_positions:,
+    attack_information: _,
   ) = game
 
   let assert board.Occupied(piece:, colour:) =
     iv.get_or_default(board, from, board.Empty)
+    as "Tried to apply castle move from invalid position"
 
   let castling = case colour {
     board.Black ->
@@ -308,6 +311,9 @@ fn apply_castle(game: Game, from: Int, to: Int, long: Bool) -> Game {
   // TODO: Update incrementally
   let zobrist_hash = hash.hash(hash_data, board, to_move)
 
+  // TODO: Maybe we can update this incrementally too?
+  let attack_information = attack.calculate(board, to_move)
+
   Game(
     board:,
     to_move:,
@@ -319,6 +325,7 @@ fn apply_castle(game: Game, from: Int, to: Int, long: Bool) -> Game {
     hash_data:,
     piece_tables:,
     previous_positions:,
+    attack_information:,
   )
 }
 
@@ -341,10 +348,12 @@ fn do_apply(
     hash_data:,
     piece_tables:,
     previous_positions:,
+    attack_information: _,
   ) = game
 
   let assert board.Occupied(piece:, colour:) =
     iv.get_or_default(board, from, board.Empty)
+    as "Tried to apply move from invalid position"
 
   let castling =
     castling
@@ -395,6 +404,9 @@ fn do_apply(
   // TODO: Update incrementally
   let zobrist_hash = hash.hash(hash_data, board, to_move)
 
+  // TODO: Maybe we can update this incrementally too?
+  let attack_information = attack.calculate(board, to_move)
+
   Game(
     board:,
     to_move:,
@@ -406,6 +418,7 @@ fn do_apply(
     hash_data:,
     piece_tables:,
     previous_positions:,
+    attack_information:,
   )
 }
 

@@ -54,6 +54,10 @@ pub const queen_directions = [
   down_right,
 ]
 
+pub const white_pawn_captures = [up_left, up_right]
+
+pub const black_pawn_captures = [up_left, up_right]
+
 pub const knight_directions = [
   Direction(-1, -2),
   Direction(1, -2),
