@@ -86,6 +86,10 @@ fn pawn_moves(
       Capture(from: position, to: new_position),
       ..moves
     ]
+    Ok(board.Empty) if game.en_passant_square == Some(new_position) -> [
+      EnPassant(from: position, to: new_position),
+      ..moves
+    ]
     Ok(board.Empty) | Ok(board.Occupied(_, _)) | Error(_) -> moves
   }
 
@@ -93,6 +97,10 @@ fn pawn_moves(
   case iv.get(game.board, new_position) {
     Ok(board.Occupied(colour:, ..)) if colour != game.to_move -> [
       Capture(from: position, to: new_position),
+      ..moves
+    ]
+    Ok(board.Empty) if game.en_passant_square == Some(new_position) -> [
+      EnPassant(from: position, to: new_position),
       ..moves
     ]
     Ok(board.Empty) | Ok(board.Occupied(_, _)) | Error(_) -> moves
