@@ -1,4 +1,6 @@
 import gleam/bool
+import gleam/dict
+import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/set
 import iv
@@ -27,6 +29,39 @@ pub fn legal(game: Game) -> List(Move(Legal)) {
     board.Occupied(piece:, colour:) if colour == game.to_move ->
       moves_for_piece(game, position, piece, moves)
     board.Occupied(_, _) | board.Empty -> moves
+  }
+}
+
+fn move_is_valid_with_pins(
+  from: Int,
+  to: Int,
+  attack_information: attack.AttackInformation,
+) -> Bool {
+  case dict.get(attack_information.pin_lines, from) {
+    Error(_) -> True
+    Ok(line) -> list.contains(line, to)
+  }
+}
+
+fn can_move(
+  from: Int,
+  to: Int,
+  attack_information: attack.AttackInformation,
+) -> Bool {
+  case attack_information.in_check {
+    False -> move_is_valid_with_pins(from, to, attack_information)
+    True ->
+      list.contains(attack_information.check_block_line, to)
+      && move_is_valid_with_pins(from, to, attack_information)
+  }
+}
+
+fn king_can_move(to: Int, attack_information: attack.AttackInformation) -> Bool {
+  case attack_information.in_check {
+    False -> !list.contains(attack_information.attacks, to)
+    True ->
+      !list.contains(attack_information.check_attack_squares, to)
+      && !list.contains(attack_information.attacks, to)
   }
 }
 
@@ -63,7 +98,12 @@ fn pawn_moves(
   let forward_one = direction.in_direction(position, forward)
   let moves = case iv.get(game.board, forward_one) {
     Ok(board.Empty) -> {
-      let moves = [Move(from: position, to: forward_one), ..moves]
+      let moves = case
+        can_move(position, forward_one, game.attack_information)
+      {
+        False -> moves
+        True -> [Move(from: position, to: forward_one), ..moves]
+      }
 
       let can_double_move = case game.to_move, board.rank(position) {
         board.Black, 6 | board.White, 1 -> True
@@ -74,7 +114,11 @@ fn pawn_moves(
 
       let forward_two = direction.in_direction(forward_one, forward)
       case iv.get(game.board, forward_two) {
-        Ok(board.Empty) -> [Move(from: position, to: forward_two), ..moves]
+        Ok(board.Empty) ->
+          case can_move(position, forward_two, game.attack_information) {
+            False -> moves
+            True -> [Move(from: position, to: forward_two), ..moves]
+          }
         Ok(board.Occupied(_, _)) | Error(_) -> moves
       }
     }
@@ -83,27 +127,31 @@ fn pawn_moves(
 
   let new_position = direction.in_direction(position, left)
   let moves = case iv.get(game.board, new_position) {
-    Ok(board.Occupied(colour:, ..)) if colour != game.to_move -> [
-      Capture(from: position, to: new_position),
-      ..moves
-    ]
-    Ok(board.Empty) if game.en_passant_square == Some(new_position) -> [
-      EnPassant(from: position, to: new_position),
-      ..moves
-    ]
+    Ok(board.Occupied(colour:, ..)) if colour != game.to_move ->
+      case can_move(position, new_position, game.attack_information) {
+        False -> moves
+        True -> [Capture(from: position, to: new_position), ..moves]
+      }
+    Ok(board.Empty) if game.en_passant_square == Some(new_position) ->
+      case can_move(position, new_position, game.attack_information) {
+        False -> moves
+        True -> [EnPassant(from: position, to: new_position), ..moves]
+      }
     Ok(board.Empty) | Ok(board.Occupied(_, _)) | Error(_) -> moves
   }
 
   let new_position = direction.in_direction(position, right)
   case iv.get(game.board, new_position) {
-    Ok(board.Occupied(colour:, ..)) if colour != game.to_move -> [
-      Capture(from: position, to: new_position),
-      ..moves
-    ]
-    Ok(board.Empty) if game.en_passant_square == Some(new_position) -> [
-      EnPassant(from: position, to: new_position),
-      ..moves
-    ]
+    Ok(board.Occupied(colour:, ..)) if colour != game.to_move ->
+      case can_move(position, new_position, game.attack_information) {
+        False -> moves
+        True -> [Capture(from: position, to: new_position), ..moves]
+      }
+    Ok(board.Empty) if game.en_passant_square == Some(new_position) ->
+      case can_move(position, new_position, game.attack_information) {
+        False -> moves
+        True -> [EnPassant(from: position, to: new_position), ..moves]
+      }
     Ok(board.Empty) | Ok(board.Occupied(_, _)) | Error(_) -> moves
   }
 }
@@ -119,11 +167,16 @@ fn knight_moves(
     [direction, ..directions] -> {
       let new_position = direction.in_direction(position, direction)
       let moves = case iv.get(game.board, new_position) {
-        Ok(board.Empty) -> [Move(from: position, to: new_position), ..moves]
-        Ok(board.Occupied(colour:, ..)) if colour != game.to_move -> [
-          Capture(from: position, to: new_position),
-          ..moves
-        ]
+        Ok(board.Empty) ->
+          case can_move(position, new_position, game.attack_information) {
+            False -> moves
+            True -> [Move(from: position, to: new_position), ..moves]
+          }
+        Ok(board.Occupied(colour:, ..)) if colour != game.to_move ->
+          case can_move(position, new_position, game.attack_information) {
+            False -> moves
+            True -> [Capture(from: position, to: new_position), ..moves]
+          }
         Ok(board.Occupied(_, _)) | Error(_) -> moves
       }
 
@@ -140,18 +193,26 @@ fn king_moves(
 ) -> List(Move(Legal)) {
   let moves = regular_king_moves(game, position, moves, directions)
 
+  // If we're in check, castling is not valid.
+  use <- bool.guard(game.attack_information.in_check, moves)
+
   let is_empty = fn(position) {
     iv.get_or_default(game.board, position, board.Empty) == board.Empty
   }
 
+  let can_move_through = fn(position) {
+    iv.get_or_default(game.board, position, board.Empty) == board.Empty
+    && !list.contains(game.attack_information.attacks, position)
+  }
+
   let moves = case game.to_move {
     board.Black if game.castling.black_kingside ->
-      case is_empty(61) && is_empty(62) {
+      case can_move_through(61) && can_move_through(62) {
         True -> [Castle(from: position, to: 62), ..moves]
         False -> moves
       }
     board.White if game.castling.white_kingside ->
-      case is_empty(5) && is_empty(6) {
+      case can_move_through(5) && can_move_through(6) {
         True -> [Castle(from: position, to: 6), ..moves]
         False -> moves
       }
@@ -160,12 +221,12 @@ fn king_moves(
 
   case game.to_move {
     board.Black if game.castling.black_queenside ->
-      case is_empty(59) && is_empty(58) && is_empty(57) {
+      case can_move_through(59) && can_move_through(58) && is_empty(57) {
         True -> [Castle(from: position, to: 58), ..moves]
         False -> moves
       }
     board.White if game.castling.white_queenside ->
-      case is_empty(3) && is_empty(2) && is_empty(1) {
+      case can_move_through(3) && can_move_through(2) && is_empty(1) {
         True -> [Castle(from: position, to: 2), ..moves]
         False -> moves
       }
@@ -184,11 +245,16 @@ fn regular_king_moves(
     [direction, ..directions] -> {
       let new_position = direction.in_direction(position, direction)
       let moves = case iv.get(game.board, new_position) {
-        Ok(board.Empty) -> [Move(from: position, to: new_position), ..moves]
-        Ok(board.Occupied(colour:, ..)) if colour != game.to_move -> [
-          Capture(from: position, to: new_position),
-          ..moves
-        ]
+        Ok(board.Empty) ->
+          case king_can_move(new_position, game.attack_information) {
+            False -> moves
+            True -> [Move(from: position, to: new_position), ..moves]
+          }
+        Ok(board.Occupied(colour:, ..)) if colour != game.to_move ->
+          case king_can_move(new_position, game.attack_information) {
+            False -> moves
+            True -> [Capture(from: position, to: new_position), ..moves]
+          }
         Ok(board.Occupied(_, _)) | Error(_) -> moves
       }
 
@@ -225,14 +291,21 @@ fn sliding_moves_in_direction(
   let new_position = direction.in_direction(position, direction)
   case iv.get(game.board, new_position) {
     Ok(board.Empty) ->
-      sliding_moves_in_direction(game, start_position, new_position, direction, [
-        Move(from: start_position, to: new_position),
-        ..moves
-      ])
-    Ok(board.Occupied(colour:, ..)) if colour != game.to_move -> [
-      Capture(from: start_position, to: new_position),
-      ..moves
-    ]
+      sliding_moves_in_direction(
+        game,
+        start_position,
+        new_position,
+        direction,
+        case can_move(start_position, new_position, game.attack_information) {
+          False -> moves
+          True -> [Move(from: start_position, to: new_position), ..moves]
+        },
+      )
+    Ok(board.Occupied(colour:, ..)) if colour != game.to_move ->
+      case can_move(start_position, new_position, game.attack_information) {
+        False -> moves
+        True -> [Capture(from: start_position, to: new_position), ..moves]
+      }
     Ok(board.Occupied(_, _)) | Error(_) -> moves
   }
 }
