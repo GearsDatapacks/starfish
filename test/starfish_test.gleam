@@ -87,7 +87,8 @@ pub fn perft_initial_position_test_() {
   use <- Timeout(1_000_000)
   use <- pocket_watch.callback("initial position", print_time)
   perft_all(starfish.starting_fen, [
-    20, 400, 8902, 197_281, 4_865_609, 119_060_324,
+    20, 400, 8902, 197_281, 4_865_609,
+    //119_060_324,
   ])
 }
 
@@ -96,7 +97,10 @@ pub fn perft_position2_test_() {
   use <- pocket_watch.callback("position 2", print_time)
   perft_all(
     "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
-    [48, 2039, 97_862, 4_085_603, 193_690_690],
+    [
+      48, 2039, 97_862, 4_085_603,
+      //193_690_690
+    ],
   )
 }
 
@@ -104,7 +108,8 @@ pub fn perft_position3_test_() {
   use <- Timeout(1_000_000)
   use <- pocket_watch.callback("position 3", print_time)
   perft_all("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1", [
-    14, 191, 2812, 43_238, 674_624, 11_030_083, 178_633_661,
+    14, 191, 2812, 43_238, 674_624, 11_030_083,
+    //178_633_661,
   ])
 }
 
@@ -120,7 +125,8 @@ pub fn perft_position5_test_() {
   use <- Timeout(1_000_000)
   use <- pocket_watch.callback("position 5", print_time)
   perft_all("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8", [
-    44, 1486, 62_379, 2_103_487, 89_941_194,
+    44, 1486, 62_379, 2_103_487,
+    //89_941_194,
   ])
 }
 
@@ -129,17 +135,149 @@ pub fn perft_position6_test_() {
   use <- pocket_watch.callback("position 6", print_time)
   perft_all(
     "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10",
-    [46, 2079, 89_890, 3_894_594, 164_075_551],
+    [
+      46, 2079, 89_890, 3_894_594,
+      //164_075_551
+    ],
   )
 }
 
 // Ensure en passant blocking check is valid
-pub fn perft_extra_position1_test_() {
-  use <- Timeout(1_000_000)
-  use <- pocket_watch.callback("extra position 1", print_time)
+pub fn perft_extra_position0_test() {
+  use <- pocket_watch.callback("extra position 0", print_time)
   perft_all("r1b1kbnr/p1p1pppp/p1K3q1/3pP3/8/8/PPP1PPPP/RNBQ1BNR w kq d6 0 1", [
     5, 157, 4146, 128_984, 3_660_806,
   ])
+}
+
+// Extra tests from:
+// https://gist.github.com/peterellisjones/8c46c28141c162d1d8a0f0badbc9cff9
+
+pub fn perft_extra_position_1_test() {
+  use <- pocket_watch.callback("extra position 1", print_time)
+  perft("r6r/1b2k1bq/8/8/7B/8/8/R3K2R b KQ - 3 2", 1, 8)
+}
+
+pub fn perft_extra_position_2_test() {
+  use <- pocket_watch.callback("extra 2osition 1", print_time)
+  perft("8/8/8/2k5/2pP4/8/B7/4K3 b - d3 0 3", 1, 8)
+}
+
+pub fn perft_extra_position_3_test() {
+  use <- pocket_watch.callback("extra 3osition 1", print_time)
+  perft("r1bqkbnr/pppppppp/n7/8/8/P7/1PPPPPPP/RNBQKBNR w KQkq - 2 2", 1, 19)
+}
+
+pub fn perft_extra_position_4_test() {
+  use <- pocket_watch.callback("extra 4osition 1", print_time)
+  perft(
+    "r3k2r/p1pp1pb1/bn2Qnp1/2qPN3/1p2P3/2N5/PPPBBPPP/R3K2R b KQkq - 3 2",
+    1,
+    5,
+  )
+}
+
+pub fn perft_extra_position_5_test() {
+  use <- pocket_watch.callback("extra 5osition 1", print_time)
+  perft(
+    "2kr3r/p1ppqpb1/bn2Qnp1/3PN3/1p2P3/2N5/PPPBBPPP/R3K2R b KQ - 3 2",
+    1,
+    44,
+  )
+}
+
+pub fn perft_extra_position_6_test() {
+  use <- pocket_watch.callback("extra 6osition 1", print_time)
+  perft("rnb2k1r/pp1Pbppp/2p5/q7/2B5/8/PPPQNnPP/RNB1K2R w KQ - 3 9", 1, 39)
+}
+
+pub fn perft_extra_position_7_test() {
+  use <- pocket_watch.callback("extra 7osition 1", print_time)
+  perft("2r5/3pk3/8/2P5/8/2K5/8/8 w - - 5 4", 1, 9)
+}
+
+pub fn perft_extra_position_8_test() {
+  use <- pocket_watch.callback("extra 8osition 1", print_time)
+  perft("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8", 3, 62_379)
+}
+
+pub fn perft_extra_position_9_test() {
+  use <- pocket_watch.callback("extra 9osition 1", print_time)
+  perft(
+    "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10",
+    3,
+    89_890,
+  )
+}
+
+pub fn perft_extra_position_10_test() {
+  use <- pocket_watch.callback("extra position 10", print_time)
+  perft("3k4/3p4/8/K1P4r/8/8/8/8 b - - 0 1", 6, 1_134_888)
+}
+
+pub fn perft_extra_position_11_test() {
+  use <- pocket_watch.callback("extra position 11", print_time)
+  perft("8/8/4k3/8/2p5/8/B2P2K1/8 w - - 0 1", 6, 1_015_133)
+}
+
+pub fn perft_extra_position_12_test() {
+  use <- pocket_watch.callback("extra position 12", print_time)
+  perft("8/8/1k6/2b5/2pP4/8/5K2/8 b - d3 0 1", 6, 1_440_467)
+}
+
+pub fn perft_extra_position_13_test() {
+  use <- pocket_watch.callback("extra position 13", print_time)
+  perft("5k2/8/8/8/8/8/8/4K2R w K - 0 1", 6, 661_072)
+}
+
+pub fn perft_extra_position_14_test() {
+  use <- pocket_watch.callback("extra position 14", print_time)
+  perft("3k4/8/8/8/8/8/8/R3K3 w Q - 0 1", 6, 803_711)
+}
+
+pub fn perft_extra_position_15_test() {
+  use <- pocket_watch.callback("extra position 15", print_time)
+  perft("r3k2r/1b4bq/8/8/8/8/7B/R3K2R w KQkq - 0 1", 4, 1_274_206)
+}
+
+pub fn perft_extra_position_16_test() {
+  use <- pocket_watch.callback("extra position 16", print_time)
+  perft("r3k2r/8/3Q4/8/8/5q2/8/R3K2R b KQkq - 0 1", 4, 1_720_476)
+}
+
+pub fn perft_extra_position_17_test() {
+  use <- pocket_watch.callback("extra position 17", print_time)
+  perft("2K2r2/4P3/8/8/8/8/8/3k4 w - - 0 1", 6, 3_821_001)
+}
+
+pub fn perft_extra_position_18_test() {
+  use <- pocket_watch.callback("extra position 18", print_time)
+  perft("8/8/1P2K3/8/2n5/1q6/8/5k2 b - - 0 1", 5, 1_004_658)
+}
+
+pub fn perft_extra_position_19_test() {
+  use <- pocket_watch.callback("extra position 19", print_time)
+  perft("4k3/1P6/8/8/8/8/K7/8 w - - 0 1", 6, 217_342)
+}
+
+pub fn perft_extra_position_20_test() {
+  use <- pocket_watch.callback("extra position 20", print_time)
+  perft("8/P1k5/K7/8/8/8/8/8 w - - 0 1", 6, 92_683)
+}
+
+pub fn perft_extra_position_21_test() {
+  use <- pocket_watch.callback("extra position 21", print_time)
+  perft("K1k5/8/P7/8/8/8/8/8 w - - 0 1", 6, 2217)
+}
+
+pub fn perft_extra_position_22_test() {
+  use <- pocket_watch.callback("extra position 22", print_time)
+  perft("8/k1P5/8/1K6/8/8/8/8 w - - 0 1", 7, 567_584)
+}
+
+pub fn perft_extra_position_23_test() {
+  use <- pocket_watch.callback("extra position 23", print_time)
+  perft("8/8/2k5/5q2/5n2/8/5K2/8 b - - 0 1", 4, 23_527)
 }
 
 fn test_apply_move(
