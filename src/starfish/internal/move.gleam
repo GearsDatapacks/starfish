@@ -148,7 +148,7 @@ fn pawn_moves(
         True -> [Capture(from: position, to: new_position), ..moves]
       }
     Ok(board.Empty) if game.en_passant_square == Some(new_position) ->
-      case can_move(position, new_position, game.attack_information) {
+      case en_passant_is_valid(game, position, new_position) {
         False -> moves
         True -> [EnPassant(from: position, to: new_position), ..moves]
       }
@@ -165,11 +165,105 @@ fn pawn_moves(
         True -> [Capture(from: position, to: new_position), ..moves]
       }
     Ok(board.Empty) if game.en_passant_square == Some(new_position) ->
-      case can_move(position, new_position, game.attack_information) {
+      case en_passant_is_valid(game, position, new_position) {
         False -> moves
         True -> [EnPassant(from: position, to: new_position), ..moves]
       }
     Ok(board.Empty) | Ok(board.Occupied(_, _)) | Error(_) -> moves
+  }
+}
+
+fn en_passant_is_valid(game: Game, position: Int, new_position: Int) -> Bool {
+  case can_move(position, new_position, game.attack_information) {
+    False -> False
+    True -> {
+      let captured_pawn_position =
+        board.position(
+          file: board.file(new_position),
+          rank: board.rank(position),
+        )
+      !in_check_after_en_passant(game, position, captured_pawn_position)
+    }
+  }
+}
+
+/// En passant needs to be checked slightly different to other moves. For example,
+/// if a row of the board looks something like this, after the black pawn having
+/// moved two squares:
+/// 
+/// ```txt
+/// | K |   | p | P |   |   | r |   |
+/// ```
+/// 
+/// Here, the white pawn is not pinned by the black rook, so it can safely move
+/// forwards. However, if it were to perform en passant and capture the black
+/// pawn, the king would be in check. Here, we check for this case.
+/// 
+/// To perform the check, we cast out rays on either side of the en passant pair.
+/// If we hit the king, as well as a rook or a queen of the opposite colour, then
+/// en passant is not valid.
+/// 
+fn in_check_after_en_passant(
+  game: Game,
+  position: Int,
+  captured_pawn_position: Int,
+) -> Bool {
+  let #(left_position, right_position) = sort(position, captured_pawn_position)
+
+  case
+    in_check_after_en_passant_loop(game, left_position, direction.left, NoPiece)
+  {
+    NoPiece | Both -> False
+    found_piece ->
+      in_check_after_en_passant_loop(
+        game,
+        right_position,
+        direction.right,
+        found_piece,
+      )
+      == Both
+  }
+}
+
+type FoundPiece {
+  NoPiece
+  KingPiece
+  EnemyPiece
+  Both
+}
+
+fn sort(a: Int, b: Int) -> #(Int, Int) {
+  case a < b {
+    True -> #(a, b)
+    False -> #(b, a)
+  }
+}
+
+fn in_check_after_en_passant_loop(
+  game: Game,
+  position: Int,
+  direction: Direction,
+  found_piece: FoundPiece,
+) -> FoundPiece {
+  let new_position = direction.in_direction(position, direction)
+  case iv.get(game.board, new_position), found_piece {
+    Ok(board.Empty), _ ->
+      in_check_after_en_passant_loop(game, new_position, direction, found_piece)
+    Ok(board.Occupied(piece: board.King, colour:)), NoPiece
+      if colour == game.to_move
+    -> KingPiece
+    Ok(board.Occupied(piece: board.King, colour:)), EnemyPiece
+      if colour == game.to_move
+    -> Both
+    Ok(board.Occupied(piece: board.Rook, colour:)), NoPiece
+    | Ok(board.Occupied(piece: board.Queen, colour:)), NoPiece
+      if colour != game.to_move
+    -> EnemyPiece
+    Ok(board.Occupied(piece: board.Rook, colour:)), KingPiece
+    | Ok(board.Occupied(piece: board.Queen, colour:)), KingPiece
+      if colour != game.to_move
+    -> Both
+    Ok(board.Occupied(_, _)), _ | Error(_), _ -> found_piece
   }
 }
 
