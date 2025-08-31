@@ -33,6 +33,21 @@ pub fn legal(game: Game) -> List(Move(Legal)) {
   }
 }
 
+/// Checks whether any legal moves are possible without calculating every legal
+/// move beforehand.
+pub fn any_legal(game: Game) -> Bool {
+  use any, square, position <- iv.index_fold(game.board, False)
+  // If we've found legal moves already, we already know  that there are some,
+  // so no need to check for more.
+  use <- bool.guard(any, any)
+
+  case square {
+    board.Occupied(piece:, colour:) if colour == game.to_move ->
+      moves_for_piece(game, position, piece, []) != []
+    board.Occupied(_, _) | board.Empty -> any
+  }
+}
+
 fn move_is_valid_with_pins(
   from: Int,
   to: Int,

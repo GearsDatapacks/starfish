@@ -1,4 +1,6 @@
+import gleam/bool
 import gleam/result
+import starfish/internal/board
 import starfish/internal/game
 import starfish/internal/move
 
@@ -175,6 +177,14 @@ pub type DrawReason {
   FiftyMoves
 }
 
+/// Returns the current game state: A win, draw or neither.
 pub fn state(game: Game) -> GameState {
-  todo
+  // TODO: Check for insufficient material and threefold repetition
+  use <- bool.guard(game.half_moves >= 50, Draw(FiftyMoves))
+  use <- bool.guard(move.any_legal(game), Continue)
+  use <- bool.guard(!game.attack_information.in_check, Draw(Stalemate))
+  case game.to_move {
+    board.Black -> WhiteWin
+    board.White -> BlackWin
+  }
 }

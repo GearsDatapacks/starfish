@@ -112,6 +112,28 @@ pub fn parse_long_algebraic_notation_test() {
   let assert Error(Nil) = starfish.parse_long_algebraic_notation("Bxe4")
 }
 
+pub fn state_test() {
+  assert "8/8/8/1q6/1K6/3q4/8/8 w - - 0 1"
+    |> starfish.from_fen
+    |> starfish.state
+    == starfish.BlackWin
+
+  assert "8/1B6/3np3/4k3/8/2B5/5R2/8 b - - 0 1"
+    |> starfish.from_fen
+    |> starfish.state
+    == starfish.WhiteWin
+
+  assert "8/8/8/1q1p2pp/8/KP3r2/5r2/8 w - - 0 1"
+    |> starfish.from_fen
+    |> starfish.state
+    == starfish.Draw(starfish.Stalemate)
+
+  assert "8/8/1RK5/8/7N/3rp3/3kb3/8 w - - 50 82"
+    |> starfish.from_fen
+    |> starfish.state
+    == starfish.Draw(starfish.FiftyMoves)
+}
+
 fn perft_all(fen: String, expected: List(Int)) {
   expected
   |> list.index_map(fn(expected, index) { perft(fen, index + 1, expected) })
