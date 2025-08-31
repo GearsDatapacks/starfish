@@ -1,18 +1,27 @@
 import gleam/bool
+import gleam/dict
 import gleam/int
 import gleam/result
-import iv
 
 pub const side_length = 8
 
 pub const size = 64
 
 pub type Board =
-  iv.Array(Square)
+  dict.Dict(Int, #(Piece, Colour))
 
 pub type Square {
   Empty
+  OffBoard
   Occupied(piece: Piece, colour: Colour)
+}
+
+pub fn get(board: Board, position: Int) -> Square {
+  use <- bool.guard(position == -1, OffBoard)
+  case dict.get(board, position) {
+    Ok(#(piece, colour)) -> Occupied(piece:, colour:)
+    Error(_) -> Empty
+  }
 }
 
 pub type Piece {
@@ -93,14 +102,14 @@ pub fn parse_position(fen: String) -> Result(#(Int, String), Nil) {
 pub fn from_fen(fen: String) -> #(Board, String, Bool) {
   // FEN starts from black's size, which means that `rank` needs to start at the
   // end of the board.
-  from_fen_loop(fen, 0, side_length - 1, iv.repeat(Empty, size))
+  from_fen_loop(fen, 0, side_length - 1, dict.new())
 }
 
 fn from_fen_loop(
   fen: String,
   file: Int,
   rank: Int,
-  board: iv.Array(Square),
+  board: Board,
 ) -> #(Board, String, Bool) {
   let position = position(file:, rank:)
 
@@ -123,84 +132,84 @@ fn from_fen_loop(
         fen,
         file + 1,
         rank,
-        iv.try_set(board, position, Occupied(King, White)),
+        dict.insert(board, position, #(King, White)),
       )
     "Q" <> fen ->
       from_fen_loop(
         fen,
         file + 1,
         rank,
-        iv.try_set(board, position, Occupied(Queen, White)),
+        dict.insert(board, position, #(Queen, White)),
       )
     "B" <> fen ->
       from_fen_loop(
         fen,
         file + 1,
         rank,
-        iv.try_set(board, position, Occupied(Bishop, White)),
+        dict.insert(board, position, #(Bishop, White)),
       )
     "N" <> fen ->
       from_fen_loop(
         fen,
         file + 1,
         rank,
-        iv.try_set(board, position, Occupied(Knight, White)),
+        dict.insert(board, position, #(Knight, White)),
       )
     "R" <> fen ->
       from_fen_loop(
         fen,
         file + 1,
         rank,
-        iv.try_set(board, position, Occupied(Rook, White)),
+        dict.insert(board, position, #(Rook, White)),
       )
     "P" <> fen ->
       from_fen_loop(
         fen,
         file + 1,
         rank,
-        iv.try_set(board, position, Occupied(Pawn, White)),
+        dict.insert(board, position, #(Pawn, White)),
       )
     "k" <> fen ->
       from_fen_loop(
         fen,
         file + 1,
         rank,
-        iv.try_set(board, position, Occupied(King, Black)),
+        dict.insert(board, position, #(King, Black)),
       )
     "q" <> fen ->
       from_fen_loop(
         fen,
         file + 1,
         rank,
-        iv.try_set(board, position, Occupied(Queen, Black)),
+        dict.insert(board, position, #(Queen, Black)),
       )
     "b" <> fen ->
       from_fen_loop(
         fen,
         file + 1,
         rank,
-        iv.try_set(board, position, Occupied(Bishop, Black)),
+        dict.insert(board, position, #(Bishop, Black)),
       )
     "n" <> fen ->
       from_fen_loop(
         fen,
         file + 1,
         rank,
-        iv.try_set(board, position, Occupied(Knight, Black)),
+        dict.insert(board, position, #(Knight, Black)),
       )
     "r" <> fen ->
       from_fen_loop(
         fen,
         file + 1,
         rank,
-        iv.try_set(board, position, Occupied(Rook, Black)),
+        dict.insert(board, position, #(Rook, Black)),
       )
     "p" <> fen ->
       from_fen_loop(
         fen,
         file + 1,
         rank,
-        iv.try_set(board, position, Occupied(Pawn, Black)),
+        dict.insert(board, position, #(Pawn, Black)),
       )
     // Since we iterate the rank in reverse order, but we iterate the file in
     // ascending order, the final position should equal to `side_length`
@@ -213,7 +222,7 @@ pub fn to_fen(board: Board) -> String {
 }
 
 fn do_to_fen(
-  board: iv.Array(Square),
+  board: Board,
   file: Int,
   rank: Int,
   empty: Int,
@@ -229,9 +238,9 @@ fn do_to_fen(
 
   let position = position(file:, rank:)
 
-  case iv.get(board, position) {
-    Ok(Empty) -> do_to_fen(board, file + 1, rank, empty + 1, fen)
-    Ok(Occupied(piece:, colour:)) -> {
+  case get(board, position) {
+    Empty -> do_to_fen(board, file + 1, rank, empty + 1, fen)
+    Occupied(piece:, colour:) -> {
       let fen = maybe_add_empty(fen, empty)
 
       let fen = case piece, colour {
@@ -251,7 +260,7 @@ fn do_to_fen(
 
       do_to_fen(board, file + 1, rank, 0, fen)
     }
-    Error(Nil) -> maybe_add_empty(fen, empty)
+    OffBoard -> maybe_add_empty(fen, empty)
   }
 }
 
@@ -263,72 +272,40 @@ fn maybe_add_empty(fen: String, empty: Int) -> String {
 }
 
 pub fn initial_position() -> Board {
-  iv.from_list(initial_squares)
+  dict.from_list(initial_squares)
 }
 
 const initial_squares = [
-  Occupied(Rook, White),
-  Occupied(Knight, White),
-  Occupied(Bishop, White),
-  Occupied(Queen, White),
-  Occupied(King, White),
-  Occupied(Bishop, White),
-  Occupied(Knight, White),
-  Occupied(Rook, White),
-  Occupied(Pawn, White),
-  Occupied(Pawn, White),
-  Occupied(Pawn, White),
-  Occupied(Pawn, White),
-  Occupied(Pawn, White),
-  Occupied(Pawn, White),
-  Occupied(Pawn, White),
-  Occupied(Pawn, White),
-  Empty,
-  Empty,
-  Empty,
-  Empty,
-  Empty,
-  Empty,
-  Empty,
-  Empty,
-  Empty,
-  Empty,
-  Empty,
-  Empty,
-  Empty,
-  Empty,
-  Empty,
-  Empty,
-  Empty,
-  Empty,
-  Empty,
-  Empty,
-  Empty,
-  Empty,
-  Empty,
-  Empty,
-  Empty,
-  Empty,
-  Empty,
-  Empty,
-  Empty,
-  Empty,
-  Empty,
-  Empty,
-  Occupied(Pawn, Black),
-  Occupied(Pawn, Black),
-  Occupied(Pawn, Black),
-  Occupied(Pawn, Black),
-  Occupied(Pawn, Black),
-  Occupied(Pawn, Black),
-  Occupied(Pawn, Black),
-  Occupied(Pawn, Black),
-  Occupied(Rook, Black),
-  Occupied(Knight, Black),
-  Occupied(Bishop, Black),
-  Occupied(Queen, Black),
-  Occupied(King, Black),
-  Occupied(Bishop, Black),
-  Occupied(Knight, Black),
-  Occupied(Rook, Black),
+  #(0, #(Rook, White)),
+  #(1, #(Knight, White)),
+  #(2, #(Bishop, White)),
+  #(3, #(Queen, White)),
+  #(4, #(King, White)),
+  #(5, #(Bishop, White)),
+  #(6, #(Knight, White)),
+  #(7, #(Rook, White)),
+  #(8, #(Pawn, White)),
+  #(9, #(Pawn, White)),
+  #(10, #(Pawn, White)),
+  #(11, #(Pawn, White)),
+  #(12, #(Pawn, White)),
+  #(13, #(Pawn, White)),
+  #(14, #(Pawn, White)),
+  #(15, #(Pawn, White)),
+  #(48, #(Pawn, Black)),
+  #(49, #(Pawn, Black)),
+  #(50, #(Pawn, Black)),
+  #(51, #(Pawn, Black)),
+  #(52, #(Pawn, Black)),
+  #(53, #(Pawn, Black)),
+  #(54, #(Pawn, Black)),
+  #(55, #(Pawn, Black)),
+  #(56, #(Rook, Black)),
+  #(57, #(Knight, Black)),
+  #(58, #(Bishop, Black)),
+  #(59, #(Queen, Black)),
+  #(60, #(King, Black)),
+  #(61, #(Bishop, Black)),
+  #(62, #(Knight, Black)),
+  #(63, #(Rook, Black)),
 ]

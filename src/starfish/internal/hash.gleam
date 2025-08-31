@@ -1,5 +1,6 @@
 //// An implementation of [Zobrist Hashing](https://www.chessprogramming.org/Zobrist_Hashing).
 
+import gleam/dict
 import gleam/int
 import iv
 import starfish/internal/board
@@ -46,22 +47,15 @@ pub fn generate_data() -> HashData {
   HashData(table:, black_to_move:)
 }
 
-pub fn hash(
-  data: HashData,
-  board: iv.Array(board.Square),
-  to_move: board.Colour,
-) -> Int {
+pub fn hash(data: HashData, board: board.Board, to_move: board.Colour) -> Int {
   let hash = case to_move {
     board.Black -> data.black_to_move
     board.White -> 0
   }
 
-  iv.index_fold(board, hash, fn(hash, square, position) {
-    case square {
-      board.Empty -> hash
-      board.Occupied(piece:, colour:) ->
-        toggle_hash_square(hash, position, piece, colour, data)
-    }
+  dict.fold(board, hash, fn(hash, position, square) {
+    let #(piece, colour) = square
+    toggle_hash_square(hash, position, piece, colour, data)
   })
 }
 

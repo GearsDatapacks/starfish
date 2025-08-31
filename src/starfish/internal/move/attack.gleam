@@ -1,7 +1,6 @@
 import gleam/bool
 import gleam/dict.{type Dict}
 import gleam/list
-import iv
 import starfish/internal/board.{type Board}
 import starfish/internal/move/direction.{type Direction}
 
@@ -30,10 +29,10 @@ pub type AttackInformation {
 
 pub fn calculate(board: Board, to_move: board.Colour) -> AttackInformation {
   // TODO: keep track of this
-  let assert Ok(king_position) =
-    iv.find_index(board, fn(square) {
-      square == board.Occupied(board.King, to_move)
-    })
+  let assert Ok(#(king_position, _)) =
+    board
+    |> dict.to_list
+    |> list.find(fn(pair) { pair.1 == #(board.King, to_move) })
     as "Failed to find king on board"
 
   let attacking = case to_move {
@@ -69,40 +68,37 @@ fn get_pin_lines(
   attacking: board.Colour,
   king_position: Int,
 ) -> Dict(Int, List(Int)) {
-  use lines, square, position <- iv.index_fold(board, dict.new())
+  use lines, position, #(piece, colour) <- dict.fold(board, dict.new())
+  use <- bool.guard(colour != attacking, lines)
 
-  case square {
-    board.Occupied(piece:, colour:) if colour == attacking ->
-      case piece {
-        board.Bishop ->
-          get_sliding_pin_lines(
-            board,
-            attacking,
-            position,
-            king_position,
-            direction.bishop_directions,
-            lines,
-          )
-        board.Queen ->
-          get_sliding_pin_lines(
-            board,
-            attacking,
-            position,
-            king_position,
-            direction.queen_directions,
-            lines,
-          )
-        board.Rook ->
-          get_sliding_pin_lines(
-            board,
-            attacking,
-            position,
-            king_position,
-            direction.rook_directions,
-            lines,
-          )
-        _ -> lines
-      }
+  case piece {
+    board.Bishop ->
+      get_sliding_pin_lines(
+        board,
+        attacking,
+        position,
+        king_position,
+        direction.bishop_directions,
+        lines,
+      )
+    board.Queen ->
+      get_sliding_pin_lines(
+        board,
+        attacking,
+        position,
+        king_position,
+        direction.queen_directions,
+        lines,
+      )
+    board.Rook ->
+      get_sliding_pin_lines(
+        board,
+        attacking,
+        position,
+        king_position,
+        direction.rook_directions,
+        lines,
+      )
     _ -> lines
   }
 }
@@ -156,8 +152,8 @@ fn get_sliding_pin_lines_loop(
     dict.insert(lines, pinned_piece, line)
   })
 
-  case iv.get(board, position) {
-    Ok(board.Empty) ->
+  case board.get(board, position) {
+    board.Empty ->
       get_sliding_pin_lines_loop(
         board,
         attacking,
@@ -170,9 +166,7 @@ fn get_sliding_pin_lines_loop(
       )
     // If we hit a piece of the opposite colour, and haven't yet encountered any
     // pieces, this could be a pin, so we remember the position and continue.
-    Ok(board.Occupied(colour:, ..))
-      if colour != attacking && pinned_piece == -1
-    ->
+    board.Occupied(colour:, ..) if colour != attacking && pinned_piece == -1 ->
       get_sliding_pin_lines_loop(
         board,
         attacking,
@@ -214,117 +208,114 @@ fn get_check_block_line(
       }
     }
 
-  use line, square, position <- iv.index_fold(board, NoLine)
+  use line, position, #(piece, colour) <- dict.fold(board, NoLine)
 
   // If multiple difference pieces are putting the king in check, it cannot be
   // blocked, and the king must move instead. In that case, there's no point
   // computing any more attacks, since no matter what, they cannot be blocked.
   use <- bool.guard(line == Multiple, line)
+  use <- bool.guard(colour != attacking, line)
 
-  case square {
-    board.Occupied(piece:, colour:) if colour == attacking ->
-      case piece {
-        // If a sliding piece is causing check, moving anywhere in the line
-        // between that piece and the king (including taking the piece) prevents
-        // check.
-        board.Rook ->
-          case
-            sliding_check_block_line(
-              board,
-              position,
-              king_position,
-              direction.rook_directions,
-            ),
-            line
-          {
-            [], _ -> line
-            line, NoLine -> Single(line)
-            _, _ -> Multiple
-          }
-        board.Bishop ->
-          case
-            sliding_check_block_line(
-              board,
-              position,
-              king_position,
-              direction.bishop_directions,
-            ),
-            line
-          {
-            [], _ -> line
-            line, NoLine -> Single(line)
-            _, _ -> Multiple
-          }
-        board.Queen ->
-          case
-            sliding_check_block_line(
-              board,
-              position,
-              king_position,
-              direction.queen_directions,
-            ),
-            line
-          {
-            [], _ -> line
-            line, NoLine -> Single(line)
-            _, _ -> Multiple
-          }
-        // For pieces which only move in a set number of directions, the only way
-        // to prevent check is to take that piece.
-        board.King ->
-          case
-            piece_attacks_square(
-              position,
-              king_position,
-              direction.queen_directions,
-            ),
-            line
-          {
-            False, _ -> line
-            True, NoLine -> Single([position])
-            _, _ -> Multiple
-          }
-        board.Knight ->
-          case
-            piece_attacks_square(
-              position,
-              king_position,
-              direction.knight_directions,
-            ),
-            line
-          {
-            False, _ -> line
-            True, NoLine -> Single([position])
-            _, _ -> Multiple
-          }
-        board.Pawn if attacking == board.Black ->
-          case
-            piece_attacks_square(
-              position,
-              king_position,
-              direction.black_pawn_captures,
-            ),
-            line
-          {
-            False, _ -> line
-            True, NoLine -> Single([position])
-            _, _ -> Multiple
-          }
-        board.Pawn ->
-          case
-            piece_attacks_square(
-              position,
-              king_position,
-              direction.white_pawn_captures,
-            ),
-            line
-          {
-            False, _ -> line
-            True, NoLine -> Single([position])
-            _, _ -> Multiple
-          }
+  case piece {
+    // If a sliding piece is causing check, moving anywhere in the line
+    // between that piece and the king (including taking the piece) prevents
+    // check.
+    board.Rook ->
+      case
+        sliding_check_block_line(
+          board,
+          position,
+          king_position,
+          direction.rook_directions,
+        ),
+        line
+      {
+        [], _ -> line
+        line, NoLine -> Single(line)
+        _, _ -> Multiple
       }
-    _ -> line
+    board.Bishop ->
+      case
+        sliding_check_block_line(
+          board,
+          position,
+          king_position,
+          direction.bishop_directions,
+        ),
+        line
+      {
+        [], _ -> line
+        line, NoLine -> Single(line)
+        _, _ -> Multiple
+      }
+    board.Queen ->
+      case
+        sliding_check_block_line(
+          board,
+          position,
+          king_position,
+          direction.queen_directions,
+        ),
+        line
+      {
+        [], _ -> line
+        line, NoLine -> Single(line)
+        _, _ -> Multiple
+      }
+    // For pieces which only move in a set number of directions, the only way
+    // to prevent check is to take that piece.
+    board.King ->
+      case
+        piece_attacks_square(
+          position,
+          king_position,
+          direction.queen_directions,
+        ),
+        line
+      {
+        False, _ -> line
+        True, NoLine -> Single([position])
+        _, _ -> Multiple
+      }
+    board.Knight ->
+      case
+        piece_attacks_square(
+          position,
+          king_position,
+          direction.knight_directions,
+        ),
+        line
+      {
+        False, _ -> line
+        True, NoLine -> Single([position])
+        _, _ -> Multiple
+      }
+    board.Pawn if attacking == board.Black ->
+      case
+        piece_attacks_square(
+          position,
+          king_position,
+          direction.black_pawn_captures,
+        ),
+        line
+      {
+        False, _ -> line
+        True, NoLine -> Single([position])
+        _, _ -> Multiple
+      }
+    board.Pawn ->
+      case
+        piece_attacks_square(
+          position,
+          king_position,
+          direction.white_pawn_captures,
+        ),
+        line
+      {
+        False, _ -> line
+        True, NoLine -> Single([position])
+        _, _ -> Multiple
+      }
   }
 }
 
@@ -380,8 +371,8 @@ fn sliding_check_block_line_loop(
   let new_position = direction.in_direction(position, direction)
   use <- bool.guard(new_position == king_position, line)
 
-  case iv.get(board, new_position) {
-    Ok(board.Empty) ->
+  case board.get(board, new_position) {
+    board.Empty ->
       sliding_check_block_line_loop(
         board,
         new_position,
@@ -413,38 +404,34 @@ fn get_check_attack_squares(
   attacking: board.Colour,
   king_position: Int,
 ) -> List(Int) {
-  use squares, square, position <- iv.index_fold(board, [])
+  use squares, position, #(piece, colour) <- dict.fold(board, [])
+  use <- bool.guard(colour != attacking, squares)
 
-  case square {
-    board.Occupied(piece:, colour:) if colour == attacking -> {
-      case piece {
-        board.Bishop ->
-          get_sliding_check_attack_squares(
-            board,
-            position,
-            king_position,
-            direction.bishop_directions,
-            squares,
-          )
-        board.Queen ->
-          get_sliding_check_attack_squares(
-            board,
-            position,
-            king_position,
-            direction.queen_directions,
-            squares,
-          )
-        board.Rook ->
-          get_sliding_check_attack_squares(
-            board,
-            position,
-            king_position,
-            direction.rook_directions,
-            squares,
-          )
-        _ -> squares
-      }
-    }
+  case piece {
+    board.Bishop ->
+      get_sliding_check_attack_squares(
+        board,
+        position,
+        king_position,
+        direction.bishop_directions,
+        squares,
+      )
+    board.Queen ->
+      get_sliding_check_attack_squares(
+        board,
+        position,
+        king_position,
+        direction.queen_directions,
+        squares,
+      )
+    board.Rook ->
+      get_sliding_check_attack_squares(
+        board,
+        position,
+        king_position,
+        direction.rook_directions,
+        squares,
+      )
     _ -> squares
   }
 }
@@ -494,8 +481,8 @@ fn get_sliding_check_attack_squares_loop(
         position -> [position, ..squares]
       }
     False ->
-      case iv.get(board, new_position) {
-        Ok(board.Empty) ->
+      case board.get(board, new_position) {
+        board.Empty ->
           get_sliding_check_attack_squares_loop(
             board,
             new_position,
@@ -511,11 +498,10 @@ fn get_sliding_check_attack_squares_loop(
 }
 
 fn get_attacks(board: Board, attacking: board.Colour) -> List(Int) {
-  use attacks, square, position <- iv.index_fold(board, [])
-  case square {
-    board.Occupied(piece:, colour:) if colour == attacking ->
-      get_attacks_for_piece(board, piece, position, attacking, attacks)
-    board.Occupied(..) | board.Empty -> attacks
+  use attacks, position, #(piece, colour) <- dict.fold(board, [])
+  case colour == attacking {
+    True -> get_attacks_for_piece(board, piece, position, attacking, attacks)
+    False -> attacks
   }
 }
 
@@ -588,9 +574,9 @@ fn get_sliding_attacks_loop(
 ) -> List(Int) {
   let new_position = direction.in_direction(position, direction)
 
-  case iv.get(board, new_position) {
-    Error(Nil) -> positions
-    Ok(board.Empty) ->
+  case board.get(board, new_position) {
+    board.OffBoard -> positions
+    board.Empty ->
       get_sliding_attacks_loop(board, new_position, direction, [
         new_position,
         ..positions
