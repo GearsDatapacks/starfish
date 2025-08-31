@@ -143,12 +143,18 @@ pub fn to_long_algebraic_notation(move: Move(a)) -> String {
   move.to_long_algebraic_notation(move)
 }
 
-pub fn parse_move(string: String) -> Result(Move(Valid), Nil) {
+/// Parses a move from long algebraic notation, in the same format as
+/// [`to_long_algebraic_notation`](#to_long_algebraic_notation).
+pub fn parse_long_algebraic_notation(string: String) -> Result(Move(Valid), Nil) {
+  move.from_long_algebraic_notation(string)
+}
+
+pub fn parse_move(move: String, game: Game) -> Result(Move(Valid), Nil) {
   todo
 }
 
 pub fn parse_legal_move(string: String, game: Game) -> Result(Move(Legal), Nil) {
-  string |> parse_move |> result.try(validate_move(_, game))
+  string |> parse_long_algebraic_notation |> result.try(validate_move(_, game))
 }
 
 pub fn validate_move(move: Move(a), game: Game) -> Result(Move(Legal), Nil) {

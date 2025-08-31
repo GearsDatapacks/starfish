@@ -1,5 +1,6 @@
 import gleam/bool
 import gleam/int
+import gleam/result
 import iv
 
 pub const side_length = 8
@@ -58,6 +59,35 @@ pub fn position_to_string(position: Int) -> String {
   }
 
   file <> rank
+}
+
+pub fn parse_position(fen: String) -> Result(#(Int, String), Nil) {
+  use #(file, fen) <- result.try(case fen {
+    "a" <> fen | "A" <> fen -> Ok(#(0, fen))
+    "b" <> fen | "B" <> fen -> Ok(#(1, fen))
+    "c" <> fen | "C" <> fen -> Ok(#(2, fen))
+    "d" <> fen | "D" <> fen -> Ok(#(3, fen))
+    "e" <> fen | "E" <> fen -> Ok(#(4, fen))
+    "f" <> fen | "F" <> fen -> Ok(#(5, fen))
+    "g" <> fen | "G" <> fen -> Ok(#(6, fen))
+    "h" <> fen | "H" <> fen -> Ok(#(7, fen))
+    _ -> Error(Nil)
+  })
+
+  use #(rank, fen) <- result.try(case fen {
+    // We subtract one from the digit because we use zero-indexed positions
+    "1" <> fen -> Ok(#(0, fen))
+    "2" <> fen -> Ok(#(1, fen))
+    "3" <> fen -> Ok(#(2, fen))
+    "4" <> fen -> Ok(#(3, fen))
+    "5" <> fen -> Ok(#(4, fen))
+    "6" <> fen -> Ok(#(5, fen))
+    "7" <> fen -> Ok(#(6, fen))
+    "8" <> fen -> Ok(#(7, fen))
+    _ -> Error(Nil)
+  })
+
+  Ok(#(position(file:, rank:), fen))
 }
 
 pub fn from_fen(fen: String) -> #(Board, String, Bool) {

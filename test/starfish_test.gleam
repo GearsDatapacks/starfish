@@ -80,6 +80,38 @@ pub fn to_long_algebraic_notation_test() {
     == "b7h1"
 }
 
+pub fn parse_long_algebraic_notation_test() {
+  let assert Ok(move) = starfish.parse_long_algebraic_notation("a2a4")
+  assert move == move.Move(from: 8, to: 24)
+  let assert Ok(move) = starfish.parse_long_algebraic_notation("g1f3")
+  assert move == move.Move(from: 6, to: 21)
+  let assert Ok(move) = starfish.parse_long_algebraic_notation("b8c6")
+  assert move == move.Move(from: 57, to: 42)
+  let assert Ok(move) = starfish.parse_long_algebraic_notation("B7b5")
+  assert move == move.Move(from: 49, to: 33)
+  let assert Ok(move) = starfish.parse_long_algebraic_notation("a5b6")
+  assert move == move.Move(from: 32, to: 41)
+  let assert Ok(move) = starfish.parse_long_algebraic_notation("e1G1")
+  assert move == move.Move(from: 4, to: 6)
+  let assert Ok(move) = starfish.parse_long_algebraic_notation("e1c1")
+  assert move == move.Move(from: 4, to: 2)
+  let assert Ok(move) = starfish.parse_long_algebraic_notation("e8g8")
+  assert move == move.Move(from: 60, to: 62)
+  let assert Ok(move) = starfish.parse_long_algebraic_notation("E8C8")
+  assert move == move.Move(from: 60, to: 58)
+  let assert Ok(move) = starfish.parse_long_algebraic_notation("d7c8q")
+  assert move == move.Promotion(from: 51, to: 58, piece: board.Queen)
+  let assert Ok(move) = starfish.parse_long_algebraic_notation("d2c1N")
+  assert move == move.Promotion(from: 11, to: 2, piece: board.Knight)
+  let assert Ok(move) = starfish.parse_long_algebraic_notation("b7h1")
+  assert move == move.Move(from: 49, to: 7)
+
+  let assert Error(Nil) = starfish.parse_long_algebraic_notation("abcd")
+  let assert Error(Nil) = starfish.parse_long_algebraic_notation("e2e4extra")
+  let assert Error(Nil) = starfish.parse_long_algebraic_notation("e2")
+  let assert Error(Nil) = starfish.parse_long_algebraic_notation("Bxe4")
+}
+
 fn perft_all(fen: String, expected: List(Int)) {
   expected
   |> list.index_map(fn(expected, index) { perft(fen, index + 1, expected) })

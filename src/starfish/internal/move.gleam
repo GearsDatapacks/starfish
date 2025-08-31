@@ -2,6 +2,7 @@ import gleam/bool
 import gleam/dict
 import gleam/list
 import gleam/option.{type Option, None, Some}
+import gleam/result
 import gleam/set
 import iv
 import starfish/internal/board
@@ -665,4 +666,17 @@ pub fn to_long_algebraic_notation(move: Move(a)) -> String {
   }
 
   from <> to <> extra
+}
+
+pub fn from_long_algebraic_notation(string: String) -> Result(Move(Valid), Nil) {
+  use #(from, string) <- result.try(board.parse_position(string))
+  use #(to, string) <- result.try(board.parse_position(string))
+  case string {
+    "" -> Ok(Move(from:, to:))
+    "b" | "B" -> Ok(Promotion(from:, to:, piece: board.Bishop))
+    "n" | "N" -> Ok(Promotion(from:, to:, piece: board.Knight))
+    "q" | "Q" -> Ok(Promotion(from:, to:, piece: board.Queen))
+    "r" | "R" -> Ok(Promotion(from:, to:, piece: board.Rook))
+    _ -> Error(Nil)
+  }
 }

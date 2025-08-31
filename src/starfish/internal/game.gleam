@@ -80,7 +80,7 @@ pub fn from_fen(fen: String) -> Game {
   let #(en_passant_square, fen) = case fen {
     "-" <> fen -> #(None, fen)
     _ -> {
-      case parse_position(fen) {
+      case board.parse_position(fen) {
         Ok(#(position, fen)) -> #(Some(position), fen)
         Error(_) -> #(None, fen)
       }
@@ -149,35 +149,6 @@ fn do_parse_int(fen: String, parsed: Int) -> #(Int, String) {
     "9" <> fen -> do_parse_int(fen, parsed * 10 + 9)
     _ -> #(parsed, fen)
   }
-}
-
-fn parse_position(fen: String) -> Result(#(Int, String), Nil) {
-  use #(file, fen) <- result.try(case fen {
-    "a" <> fen | "A" <> fen -> Ok(#(0, fen))
-    "b" <> fen | "B" <> fen -> Ok(#(1, fen))
-    "c" <> fen | "C" <> fen -> Ok(#(2, fen))
-    "d" <> fen | "D" <> fen -> Ok(#(3, fen))
-    "e" <> fen | "E" <> fen -> Ok(#(4, fen))
-    "f" <> fen | "F" <> fen -> Ok(#(5, fen))
-    "g" <> fen | "G" <> fen -> Ok(#(6, fen))
-    "h" <> fen | "H" <> fen -> Ok(#(7, fen))
-    _ -> Error(Nil)
-  })
-
-  use #(rank, fen) <- result.try(case fen {
-    // We subtract one from the digit because we use zero-indexed positions
-    "1" <> fen -> Ok(#(0, fen))
-    "2" <> fen -> Ok(#(1, fen))
-    "3" <> fen -> Ok(#(2, fen))
-    "4" <> fen -> Ok(#(3, fen))
-    "5" <> fen -> Ok(#(4, fen))
-    "6" <> fen -> Ok(#(5, fen))
-    "7" <> fen -> Ok(#(6, fen))
-    "8" <> fen -> Ok(#(7, fen))
-    _ -> Error(Nil)
-  })
-
-  Ok(#(board.position(file:, rank:), fen))
 }
 
 fn parse_castling(fen: String) -> #(Castling, String) {
@@ -253,7 +224,7 @@ pub fn try_from_fen(fen: String) -> Result(Game, FenParseError) {
   use #(en_passant_square, fen) <- result.try(case fen {
     "-" <> fen -> Ok(#(None, fen))
     _ -> {
-      case parse_position(fen) {
+      case board.parse_position(fen) {
         Ok(#(position, fen)) -> Ok(#(Some(position), fen))
         Error(Nil) -> Error(ExpectedEnPassantPosition)
       }
