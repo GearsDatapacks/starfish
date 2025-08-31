@@ -3,6 +3,7 @@ import gleam/result
 import starfish/internal/board
 import starfish/internal/game
 import starfish/internal/move
+import starfish/internal/search
 
 pub type Game =
   game.Game
@@ -126,7 +127,7 @@ pub fn legal_moves(game: Game) -> List(Move(Legal)) {
 }
 
 pub fn search(game: Game, to_depth depth: Int) -> Result(Move(Legal), Nil) {
-  todo
+  search.best_move(game, depth)
 }
 
 pub fn apply_move(game: Game, move: Move(Legal)) -> Game {

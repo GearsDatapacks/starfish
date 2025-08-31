@@ -166,6 +166,18 @@ fn print_time(name: String, time: String) -> Nil {
   io.println_error("\nPerft test of " <> name <> " took " <> time <> ".")
 }
 
+pub fn search_test_() {
+  use <- Timeout(1_000_000)
+  use <- pocket_watch.callback("search", print_time)
+  let assert Ok(move) =
+    starfish.search(
+      starfish.from_fen("8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1"),
+      to_depth: 5,
+    )
+  // b4f4
+  assert move == move.Capture(from: 25, to: 29)
+}
+
 pub fn perft_initial_position_test_() {
   use <- Timeout(1_000_000)
   use <- pocket_watch.callback("initial position", print_time)
