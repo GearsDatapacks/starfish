@@ -242,17 +242,17 @@ pub fn perft_extra_position_1_test() {
 }
 
 pub fn perft_extra_position_2_test() {
-  use <- pocket_watch.callback("extra 2osition 1", print_time)
+  use <- pocket_watch.callback("extra position 2", print_time)
   perft("8/8/8/2k5/2pP4/8/B7/4K3 b - d3 0 3", 1, 8)
 }
 
 pub fn perft_extra_position_3_test() {
-  use <- pocket_watch.callback("extra 3osition 1", print_time)
+  use <- pocket_watch.callback("extra position 3", print_time)
   perft("r1bqkbnr/pppppppp/n7/8/8/P7/1PPPPPPP/RNBQKBNR w KQkq - 2 2", 1, 19)
 }
 
 pub fn perft_extra_position_4_test() {
-  use <- pocket_watch.callback("extra 4osition 1", print_time)
+  use <- pocket_watch.callback("extra position 4", print_time)
   perft(
     "r3k2r/p1pp1pb1/bn2Qnp1/2qPN3/1p2P3/2N5/PPPBBPPP/R3K2R b KQkq - 3 2",
     1,
@@ -261,7 +261,7 @@ pub fn perft_extra_position_4_test() {
 }
 
 pub fn perft_extra_position_5_test() {
-  use <- pocket_watch.callback("extra 5osition 1", print_time)
+  use <- pocket_watch.callback("extra position 5", print_time)
   perft(
     "2kr3r/p1ppqpb1/bn2Qnp1/3PN3/1p2P3/2N5/PPPBBPPP/R3K2R b KQ - 3 2",
     1,
@@ -270,22 +270,22 @@ pub fn perft_extra_position_5_test() {
 }
 
 pub fn perft_extra_position_6_test() {
-  use <- pocket_watch.callback("extra 6osition 1", print_time)
+  use <- pocket_watch.callback("extra position 6", print_time)
   perft("rnb2k1r/pp1Pbppp/2p5/q7/2B5/8/PPPQNnPP/RNB1K2R w KQ - 3 9", 1, 39)
 }
 
 pub fn perft_extra_position_7_test() {
-  use <- pocket_watch.callback("extra 7osition 1", print_time)
+  use <- pocket_watch.callback("extra position 7", print_time)
   perft("2r5/3pk3/8/2P5/8/2K5/8/8 w - - 5 4", 1, 9)
 }
 
 pub fn perft_extra_position_8_test() {
-  use <- pocket_watch.callback("extra 8osition 1", print_time)
+  use <- pocket_watch.callback("extra position 8", print_time)
   perft("rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8", 3, 62_379)
 }
 
 pub fn perft_extra_position_9_test() {
-  use <- pocket_watch.callback("extra 9osition 1", print_time)
+  use <- pocket_watch.callback("extra position 9", print_time)
   perft(
     "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10",
     3,
