@@ -133,6 +133,15 @@ pub fn perft_position6_test_() {
   )
 }
 
+// Ensure en passant blocking check is valid
+pub fn perft_extra_position1_test_() {
+  use <- Timeout(1_000_000)
+  use <- pocket_watch.callback("extra position 1", print_time)
+  perft_all("r1b1kbnr/p1p1pppp/p1K3q1/3pP3/8/8/PPP1PPPP/RNBQ1BNR w kq d6 0 1", [
+    5, 157, 4146, 128_984, 3_660_806,
+  ])
+}
+
 fn test_apply_move(
   starting_fen: String,
   moves: List(move.Move(move.Legal)),

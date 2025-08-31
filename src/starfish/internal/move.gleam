@@ -174,17 +174,30 @@ fn pawn_moves(
 }
 
 fn en_passant_is_valid(game: Game, position: Int, new_position: Int) -> Bool {
-  case can_move(position, new_position, game.attack_information) {
-    False -> False
-    True -> {
-      let captured_pawn_position =
-        board.position(
-          file: board.file(new_position),
-          rank: board.rank(position),
+  let captured_pawn_position =
+    board.position(file: board.file(new_position), rank: board.rank(position))
+
+  case game.attack_information.in_check {
+    False ->
+      move_is_valid_with_pins(position, new_position, game.attack_information)
+    True ->
+      // If the king is in check by the pawn we are capturing, then en passant
+      // is valid. It is also valid if moving the pawn to its new location blocks
+      // the existing check.
+      {
+        list.contains(
+          game.attack_information.check_block_line,
+          captured_pawn_position,
         )
-      !in_check_after_en_passant(game, position, captured_pawn_position)
-    }
+        || list.contains(game.attack_information.check_block_line, new_position)
+      }
+      && move_is_valid_with_pins(
+        position,
+        new_position,
+        game.attack_information,
+      )
   }
+  && !in_check_after_en_passant(game, position, captured_pawn_position)
 }
 
 /// En passant needs to be checked slightly different to other moves. For example,
