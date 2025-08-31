@@ -23,6 +23,8 @@ pub type Piece {
   King
 }
 
+pub const pawn_promotions = [Bishop, Knight, Rook, Queen]
+
 pub type Colour {
   White
   Black

@@ -90,18 +90,31 @@ fn pawn_moves(
   position: Int,
   moves: List(Move(Legal)),
 ) -> List(Move(Legal)) {
-  let #(forward, left, right) = case game.to_move {
-    board.Black -> #(direction.down, direction.down_left, direction.down_right)
-    board.White -> #(direction.up, direction.up_left, direction.up_right)
+  let #(forward, left, right, promotion_rank) = case game.to_move {
+    board.Black -> #(
+      direction.down,
+      direction.down_left,
+      direction.down_right,
+      0,
+    )
+    board.White -> #(direction.up, direction.up_left, direction.up_right, 7)
   }
 
   let forward_one = direction.in_direction(position, forward)
+  // If moving forward on square is a promotion, then captured are also
+  // promotions, because they must move to the same rank. A double-move can
+  // never be a promotion because a pawn cannot double move from a position that
+  // ends on the promotion rank.
+  let is_promotion = board.rank(forward_one) == promotion_rank
+
   let moves = case iv.get(game.board, forward_one) {
     Ok(board.Empty) -> {
       let moves = case
         can_move(position, forward_one, game.attack_information)
       {
         False -> moves
+        True if is_promotion ->
+          add_promotions(position, forward_one, moves, board.pawn_promotions)
         True -> [Move(from: position, to: forward_one), ..moves]
       }
 
@@ -130,6 +143,8 @@ fn pawn_moves(
     Ok(board.Occupied(colour:, ..)) if colour != game.to_move ->
       case can_move(position, new_position, game.attack_information) {
         False -> moves
+        True if is_promotion ->
+          add_promotions(position, new_position, moves, board.pawn_promotions)
         True -> [Capture(from: position, to: new_position), ..moves]
       }
     Ok(board.Empty) if game.en_passant_square == Some(new_position) ->
@@ -145,6 +160,8 @@ fn pawn_moves(
     Ok(board.Occupied(colour:, ..)) if colour != game.to_move ->
       case can_move(position, new_position, game.attack_information) {
         False -> moves
+        True if is_promotion ->
+          add_promotions(position, new_position, moves, board.pawn_promotions)
         True -> [Capture(from: position, to: new_position), ..moves]
       }
     Ok(board.Empty) if game.en_passant_square == Some(new_position) ->
@@ -153,6 +170,19 @@ fn pawn_moves(
         True -> [EnPassant(from: position, to: new_position), ..moves]
       }
     Ok(board.Empty) | Ok(board.Occupied(_, _)) | Error(_) -> moves
+  }
+}
+
+fn add_promotions(
+  from: Int,
+  to: Int,
+  moves: List(Move(Legal)),
+  pieces: List(board.Piece),
+) -> List(Move(Legal)) {
+  case pieces {
+    [] -> moves
+    [piece, ..pieces] ->
+      add_promotions(from, to, [Promotion(from:, to:, piece:), ..moves], pieces)
   }
 }
 
