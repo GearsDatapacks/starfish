@@ -51,6 +51,35 @@ pub fn to_fen_test() {
   assert fen |> starfish.from_fen |> starfish.to_fen == fen
 }
 
+pub fn to_long_algebraic_notation_test() {
+  assert move.Move(from: 8, to: 24) |> starfish.to_long_algebraic_notation
+    == "a2a4"
+  assert move.Move(from: 6, to: 21) |> starfish.to_long_algebraic_notation
+    == "g1f3"
+  assert move.Move(from: 57, to: 42) |> starfish.to_long_algebraic_notation
+    == "b8c6"
+  assert move.Move(from: 49, to: 33) |> starfish.to_long_algebraic_notation
+    == "b7b5"
+  assert move.EnPassant(from: 32, to: 41) |> starfish.to_long_algebraic_notation
+    == "a5b6"
+  assert move.Castle(from: 4, to: 6) |> starfish.to_long_algebraic_notation
+    == "e1g1"
+  assert move.Castle(from: 4, to: 2) |> starfish.to_long_algebraic_notation
+    == "e1c1"
+  assert move.Castle(from: 60, to: 62) |> starfish.to_long_algebraic_notation
+    == "e8g8"
+  assert move.Castle(from: 60, to: 58) |> starfish.to_long_algebraic_notation
+    == "e8c8"
+  assert move.Promotion(from: 51, to: 58, piece: board.Queen)
+    |> starfish.to_long_algebraic_notation
+    == "d7c8q"
+  assert move.Promotion(from: 11, to: 2, piece: board.Knight)
+    |> starfish.to_long_algebraic_notation
+    == "d2c1n"
+  assert move.Capture(from: 49, to: 7) |> starfish.to_long_algebraic_notation
+    == "b7h1"
+}
+
 fn perft_all(fen: String, expected: List(Int)) {
   expected
   |> list.index_map(fn(expected, index) { perft(fen, index + 1, expected) })

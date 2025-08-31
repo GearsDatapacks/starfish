@@ -647,3 +647,22 @@ fn remove_castling(castling: game.Castling, position: Int) -> game.Castling {
     _ -> castling
   }
 }
+
+pub fn to_long_algebraic_notation(move: Move(a)) -> String {
+  let from = board.position_to_string(move.from)
+  let to = board.position_to_string(move.to)
+  let extra = case move {
+    Capture(..) | Castle(..) | EnPassant(..) | Move(..) -> ""
+    Promotion(piece:, ..) ->
+      case piece {
+        board.Bishop -> "b"
+        board.King -> "k"
+        board.Knight -> "n"
+        board.Pawn -> "p"
+        board.Queen -> "q"
+        board.Rook -> "r"
+      }
+  }
+
+  from <> to <> extra
+}

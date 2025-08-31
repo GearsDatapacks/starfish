@@ -42,6 +42,24 @@ pub fn rank(position: Int) -> Int {
   position / 8
 }
 
+pub fn position_to_string(position: Int) -> String {
+  // Add one, because file/rank is zero-indexed
+  let rank = int.to_string(rank(position) + 1)
+
+  let file = case file(position) {
+    0 -> "a"
+    1 -> "b"
+    2 -> "c"
+    3 -> "d"
+    4 -> "e"
+    5 -> "f"
+    6 -> "g"
+    _ -> "h"
+  }
+
+  file <> rank
+}
+
 pub fn from_fen(fen: String) -> #(Board, String, Bool) {
   // FEN starts from black's size, which means that `rank` needs to start at the
   // end of the board.

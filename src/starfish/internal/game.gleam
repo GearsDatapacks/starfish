@@ -340,7 +340,7 @@ pub fn to_fen(game: Game) -> String {
   let castling = castling_to_string(game.castling)
   let en_passant = case game.en_passant_square {
     None -> "-"
-    Some(position) -> position_to_string(position)
+    Some(position) -> board.position_to_string(position)
   }
   let half_moves = int.to_string(game.half_moves)
   let full_moves = int.to_string(game.full_moves)
@@ -349,24 +349,6 @@ pub fn to_fen(game: Game) -> String {
     [board_fen, active_colour, castling, en_passant, half_moves, full_moves],
     " ",
   )
-}
-
-fn position_to_string(position: Int) -> String {
-  // Add one, because file/rank is zero-indexed
-  let rank = int.to_string(board.rank(position) + 1)
-
-  let file = case board.file(position) {
-    0 -> "a"
-    1 -> "b"
-    2 -> "c"
-    3 -> "d"
-    4 -> "e"
-    5 -> "f"
-    6 -> "g"
-    _ -> "h"
-  }
-
-  file <> rank
 }
 
 fn castling_to_string(castling: Castling) -> String {

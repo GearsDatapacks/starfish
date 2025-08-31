@@ -135,8 +135,12 @@ pub fn to_standard_algebraic_notation(move: Move(a)) -> String {
   todo
 }
 
+/// Convert a move to [long algebraic notation](
+/// https://en.wikipedia.org/wiki/Algebraic_notation_(chess)#Long_algebraic_notation),
+/// specifically the UCI format, containing the start and end positions. For
+/// example, `e2e4` or `c7d8q`.
 pub fn to_long_algebraic_notation(move: Move(a)) -> String {
-  todo
+  move.to_long_algebraic_notation(move)
 }
 
 pub fn parse_move(string: String) -> Result(Move(Valid), Nil) {
