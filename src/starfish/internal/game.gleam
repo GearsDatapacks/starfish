@@ -7,7 +7,6 @@ import gleam/string
 import starfish/internal/board.{Black, White}
 import starfish/internal/hash
 import starfish/internal/move/attack
-import starfish/internal/piece_table
 
 pub type Castling {
   Castling(
@@ -29,8 +28,6 @@ pub type Game {
     full_moves: Int,
     // Extra information
     zobrist_hash: Int,
-    hash_data: hash.HashData,
-    piece_tables: piece_table.PieceTables,
     previous_positions: Set(Int),
     attack_information: attack.AttackInformation,
   )
@@ -40,10 +37,8 @@ const all_castling = Castling(True, True, True, True)
 
 pub fn initial_position() -> Game {
   let to_move = White
-  let hash_data = hash.generate_data()
-  let piece_tables = piece_table.construct_tables()
   let board = board.initial_position()
-  let zobrist_hash = hash.hash(hash_data, board, to_move)
+  let zobrist_hash = hash.hash(board, to_move)
   let attack_information = attack.calculate(board, to_move)
 
   Game(
@@ -54,8 +49,6 @@ pub fn initial_position() -> Game {
     half_moves: 0,
     full_moves: 1,
     zobrist_hash:,
-    hash_data:,
-    piece_tables:,
     previous_positions: set.new(),
     attack_information:,
   )
@@ -99,9 +92,7 @@ pub fn from_fen(fen: String) -> Game {
     Ok(#(moves, _)) -> moves
   }
 
-  let hash_data = hash.generate_data()
-  let piece_tables = piece_table.construct_tables()
-  let zobrist_hash = hash.hash(hash_data, board, to_move)
+  let zobrist_hash = hash.hash(board, to_move)
   let attack_information = attack.calculate(board, to_move)
 
   Game(
@@ -112,8 +103,6 @@ pub fn from_fen(fen: String) -> Game {
     half_moves:,
     full_moves:,
     zobrist_hash:,
-    hash_data:,
-    piece_tables:,
     previous_positions: set.new(),
     attack_information:,
   )
@@ -244,9 +233,7 @@ pub fn try_from_fen(fen: String) -> Result(Game, FenParseError) {
   let fen = strip_spaces(fen)
   use <- bool.guard(fen != "", Error(TrailingData(fen)))
 
-  let hash_data = hash.generate_data()
-  let piece_tables = piece_table.construct_tables()
-  let zobrist_hash = hash.hash(hash_data, board, to_move)
+  let zobrist_hash = hash.hash(board, to_move)
   let attack_information = attack.calculate(board, to_move)
 
   Ok(Game(
@@ -257,8 +244,6 @@ pub fn try_from_fen(fen: String) -> Result(Game, FenParseError) {
     half_moves:,
     full_moves:,
     zobrist_hash:,
-    hash_data:,
-    piece_tables:,
     previous_positions: set.new(),
     attack_information:,
   ))

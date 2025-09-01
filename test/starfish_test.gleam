@@ -12,8 +12,7 @@ pub fn main() -> Nil {
   gleeunit.main()
 }
 
-// Ignore `HashData` and `PieceTables` as they are not relevant to the state of
-// the board.
+/// Compare the state of two games, ignoring additional fields
 fn game_equal(a: game.Game, b: game.Game) -> Bool {
   a.board == b.board
   && a.to_move == b.to_move

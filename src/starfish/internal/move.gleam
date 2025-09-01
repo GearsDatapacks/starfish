@@ -478,8 +478,6 @@ fn apply_castle(game: Game, from: Int, to: Int, long: Bool) -> Game {
     half_moves:,
     full_moves:,
     zobrist_hash:,
-    hash_data:,
-    piece_tables:,
     previous_positions:,
     attack_information: _,
   ) = game
@@ -526,7 +524,7 @@ fn apply_castle(game: Game, from: Int, to: Int, long: Bool) -> Game {
   let previous_positions = set.insert(previous_positions, zobrist_hash)
 
   // TODO: Update incrementally
-  let zobrist_hash = hash.hash(hash_data, board, to_move)
+  let zobrist_hash = hash.hash(board, to_move)
 
   // TODO: Maybe we can update this incrementally too?
   let attack_information = attack.calculate(board, to_move)
@@ -539,8 +537,6 @@ fn apply_castle(game: Game, from: Int, to: Int, long: Bool) -> Game {
     half_moves:,
     full_moves:,
     zobrist_hash:,
-    hash_data:,
-    piece_tables:,
     previous_positions:,
     attack_information:,
   )
@@ -562,8 +558,6 @@ fn do_apply(
     half_moves:,
     full_moves:,
     zobrist_hash:,
-    hash_data:,
-    piece_tables:,
     previous_positions:,
     attack_information: _,
   ) = game
@@ -616,7 +610,7 @@ fn do_apply(
   }
 
   // TODO: Update incrementally
-  let zobrist_hash = hash.hash(hash_data, board, to_move)
+  let zobrist_hash = hash.hash(board, to_move)
 
   // TODO: Maybe we can update this incrementally too?
   let attack_information = attack.calculate(board, to_move)
@@ -629,8 +623,6 @@ fn do_apply(
     half_moves:,
     full_moves:,
     zobrist_hash:,
-    hash_data:,
-    piece_tables:,
     previous_positions:,
     attack_information:,
   )

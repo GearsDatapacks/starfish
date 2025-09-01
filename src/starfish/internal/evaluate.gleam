@@ -3,6 +3,7 @@ import gleam/list
 import starfish/internal/board
 import starfish/internal/game
 import starfish/internal/move
+import starfish/internal/piece_table
 
 /// Statically evaluates a position. Does not take into account checkmate or
 /// stalemate, those must be accounted for beforehand.
@@ -14,10 +15,12 @@ pub fn evaluate(
 }
 
 fn evaluate_position(game: game.Game) -> Int {
-  use eval, _position, #(piece, colour) <- dict.fold(game.board, 0)
+  use eval, position, #(piece, colour) <- dict.fold(game.board, 0)
+  let score =
+    piece_score(piece) + piece_table.piece_score(piece, colour, position)
   case colour == game.to_move {
-    True -> eval + piece_score(piece)
-    False -> eval - piece_score(piece)
+    True -> eval + score
+    False -> eval - score
   }
 }
 
