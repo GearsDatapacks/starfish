@@ -2,27 +2,36 @@ import gleam/bool
 import gleam/option.{type Option, None, Some}
 import starfish/internal/evaluate
 import starfish/internal/game.{type Game}
+import starfish/internal/hash
 import starfish/internal/move
 
 /// Not really infinity, but a high enough number that nothing but explicit 
 /// references to it will reach it.
 const infinity = 1_000_000_000
 
+const checkmate = -1_000_000
+
 type Move =
   move.Move(move.Legal)
 
 pub fn best_move(game: Game, depth: Int) -> Result(Move, Nil) {
   use <- bool.guard(depth < 1, Error(Nil))
-  let result = search_top_level(game, depth, move.legal(game), None, -infinity)
-
-  case result {
-    Ok(SearchResult(eval: _, move:)) -> Ok(move)
-    Error(Nil) -> Error(Nil)
-  }
+  search_top_level(
+    game,
+    hash.new_table(),
+    depth,
+    move.legal(game),
+    None,
+    -infinity,
+  )
 }
 
 type SearchResult {
-  SearchResult(eval: Int, move: Move)
+  SearchResult(
+    eval: Int,
+    cached_positions: hash.Table,
+    eval_kind: hash.CacheKind,
+  )
 }
 
 /// Standard minimax search, with alpha-beta pruning. For each position searched,
@@ -33,68 +42,144 @@ type SearchResult {
 /// `evaluate` module)
 fn search_top_level(
   game: Game,
+  cached_positions: hash.Table,
   depth: Int,
   legal_moves: List(Move),
   best_move: Option(Move),
   best_eval: Int,
-) -> Result(SearchResult, Nil) {
+) -> Result(Move, Nil) {
   case legal_moves {
     [] ->
       case best_move {
         None -> Error(Nil)
-        Some(best_move) -> Ok(SearchResult(move: best_move, eval: best_eval))
+        Some(best_move) -> Ok(best_move)
       }
     [move, ..moves] -> {
-      let eval =
-        -search(move.apply(game, move), depth - 1, -infinity, -best_eval, 0)
+      let SearchResult(eval:, cached_positions:, ..) =
+        search(
+          move.apply(game, move),
+          cached_positions,
+          depth - 1,
+          -infinity,
+          -best_eval,
+          0,
+        )
+
+      let eval = -eval
 
       let #(best_move, best_eval) = case eval > best_eval {
         True -> #(Some(move), eval)
         False -> #(best_move, best_eval)
       }
-      search_top_level(game, depth, moves, best_move, best_eval)
+      search_top_level(
+        game,
+        cached_positions,
+        depth,
+        moves,
+        best_move,
+        best_eval,
+      )
     }
   }
 }
 
 fn search(
   game: Game,
+  cached_positions: hash.Table,
   depth: Int,
   best_eval: Int,
   best_opponent_move: Int,
   depth_searched: Int,
-) -> Int {
+) -> SearchResult {
   // If we have reached fifty moves, the game is already a draw, so there's no
   // point searching further.
-  use <- bool.guard(game.half_moves >= 50, 0)
+  use <- bool.guard(
+    game.half_moves >= 50,
+    SearchResult(0, cached_positions, hash.Exact),
+  )
 
-  case move.legal(game) {
-    // If the game is in a checkmate or stalemate position, the game is over, so
-    // we stop searching.
-    // Sooner checkmate is better. Or from the perspective of the side being
-    // mated, later checkmate is better.
-    [] if game.attack_information.in_check -> -infinity + depth_searched
-    [] -> 0
-    moves ->
-      case depth {
-        // Once we reach the limit of our depth, we statically evaluate the position.
-        0 -> evaluate.evaluate(game, moves)
-        _ -> {
-          search_loop(
-            game,
-            moves,
-            depth,
-            best_eval,
-            best_opponent_move,
-            depth_searched,
-          )
+  case
+    hash.get(
+      cached_positions,
+      game.zobrist_hash,
+      depth,
+      depth_searched,
+      best_eval,
+      best_opponent_move,
+    )
+  {
+    Ok(eval) -> SearchResult(eval:, cached_positions:, eval_kind: hash.Exact)
+    Error(_) ->
+      case move.legal(game) {
+        // If the game is in a checkmate or stalemate position, the game is over, so
+        // we stop searching.
+        [] -> {
+          let eval = case game.attack_information.in_check {
+            // Sooner checkmate is better. Or from the perspective of the side being
+            // mated, later checkmate is better.
+            True -> checkmate + depth_searched
+            False -> 0
+          }
+          let cached_positions =
+            hash.cache(
+              cached_positions,
+              game.zobrist_hash,
+              depth,
+              depth_searched,
+              hash.Exact,
+              eval,
+            )
+          SearchResult(eval:, cached_positions:, eval_kind: hash.Exact)
         }
+        moves ->
+          case depth {
+            // Once we reach the limit of our depth, we statically evaluate the position.
+            0 -> {
+              let eval = evaluate.evaluate(game, moves)
+              let cached_positions =
+                hash.cache(
+                  cached_positions,
+                  game.zobrist_hash,
+                  depth,
+                  depth_searched,
+                  hash.Exact,
+                  eval,
+                )
+              SearchResult(eval:, cached_positions:, eval_kind: hash.Exact)
+            }
+            _ -> {
+              let SearchResult(eval:, cached_positions:, eval_kind:) =
+                search_loop(
+                  game,
+                  cached_positions,
+                  moves,
+                  depth,
+                  best_eval,
+                  best_opponent_move,
+                  depth_searched,
+                  hash.Ceiling,
+                )
+
+              let cached_positions =
+                hash.cache(
+                  cached_positions,
+                  game.zobrist_hash,
+                  depth,
+                  depth_searched,
+                  eval_kind,
+                  eval,
+                )
+
+              SearchResult(eval:, cached_positions:, eval_kind:)
+            }
+          }
       }
   }
 }
 
 fn search_loop(
   game: Game,
+  cached_positions: hash.Table,
   moves: List(Move),
   depth: Int,
   // The best evaluation we've encountered so far.
@@ -104,35 +189,44 @@ fn search_loop(
   // assume that our opponent would never let us get there.
   best_opponent_move: Int,
   depth_searched: Int,
-) -> Int {
+  eval_kind: hash.CacheKind,
+) -> SearchResult {
   case moves {
-    [] -> best_eval
+    [] -> SearchResult(eval: best_eval, cached_positions:, eval_kind:)
     [move, ..moves] -> {
       // Evaluate the position for the opponent. The negative of the opponent's
       // eval is our eval.
-      let eval =
-        -search(
+      let SearchResult(eval:, cached_positions:, eval_kind: _) =
+        search(
           move.apply(game, move),
+          cached_positions,
           depth - 1,
           -best_opponent_move,
           -best_eval,
           depth_searched + 1,
         )
 
-      use <- bool.guard(eval >= best_opponent_move, best_opponent_move)
+      let eval = -eval
 
-      let best_eval = case eval > best_eval {
-        True -> eval
-        False -> best_eval
+      use <- bool.guard(
+        eval >= best_opponent_move,
+        SearchResult(best_opponent_move, cached_positions, hash.Floor),
+      )
+
+      let #(best_eval, eval_kind) = case eval > best_eval {
+        True -> #(eval, hash.Exact)
+        False -> #(best_eval, eval_kind)
       }
 
       search_loop(
         game,
+        cached_positions,
         moves,
         depth,
         best_eval,
         best_opponent_move,
         depth_searched,
+        eval_kind,
       )
     }
   }
