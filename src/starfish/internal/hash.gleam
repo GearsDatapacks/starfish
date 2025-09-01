@@ -162,7 +162,7 @@ pub fn get(
   depth_searched: Int,
   best_eval: Int,
   best_opponent_move: Int,
-) -> Result(Int, Nil) {
+) -> Result(#(Int, CacheKind), Nil) {
   let key = hash % table_size
   let entry = iv.get_or_default(table, key, missing_entry)
   use <- bool.guard(entry.hash != hash || entry.depth < depth, Error(Nil))
@@ -170,9 +170,9 @@ pub fn get(
   let eval = correct_mate_score(entry.eval, depth_searched)
 
   case entry.kind {
-    Exact -> Ok(eval)
-    Ceiling if eval >= best_opponent_move -> Ok(eval)
-    Floor if eval <= best_eval -> Ok(eval)
+    Exact -> Ok(#(eval, Exact))
+    Ceiling if eval >= best_opponent_move -> Ok(#(eval, Ceiling))
+    Floor if eval <= best_eval -> Ok(#(eval, Floor))
     _ -> Error(Nil)
   }
 }

@@ -108,7 +108,7 @@ fn search(
       best_opponent_move,
     )
   {
-    Ok(eval) -> SearchResult(eval:, cached_positions:, eval_kind: hash.Exact)
+    Ok(#(eval, eval_kind)) -> SearchResult(eval:, cached_positions:, eval_kind:)
     Error(_) ->
       case move.legal(game) {
         // If the game is in a checkmate or stalemate position, the game is over, so
@@ -196,7 +196,7 @@ fn search_loop(
     [move, ..moves] -> {
       // Evaluate the position for the opponent. The negative of the opponent's
       // eval is our eval.
-      let SearchResult(eval:, cached_positions:, eval_kind: _) =
+      let SearchResult(eval:, cached_positions:, eval_kind: search_kind) =
         search(
           move.apply(game, move),
           cached_positions,
@@ -214,7 +214,7 @@ fn search_loop(
       )
 
       let #(best_eval, eval_kind) = case eval > best_eval {
-        True -> #(eval, hash.Exact)
+        True -> #(eval, search_kind)
         False -> #(best_eval, eval_kind)
       }
 
