@@ -1,24 +1,21 @@
-# starfish
+# Starfish
 
-[![Package Version](https://img.shields.io/hexpm/v/starfish)](https://hex.pm/packages/starfish)
-[![Hex Docs](https://img.shields.io/badge/hex-docs-ffaff3)](https://hexdocs.pm/starfish/)
+A chess library for Gleam!
 
-```sh
-gleam add starfish@1
-```
-```gleam
-import starfish
-
-pub fn main() -> Nil {
-  // TODO: An example of the project in use
-}
-```
-
-Further documentation can be found at <https://hexdocs.pm/starfish>.
-
-## Development
-
-```sh
-gleam run   # Run the project
-gleam test  # Run the tests
-```
+### TODO list
+- [x] Implement full legal move generation
+- [x] Implement basic minimax search
+- [x] Use zobrist hashing to cache positions when searching
+- [x] Use piece tables to give more weight to certain squares in evaluation
+- [ ] Continue searching past regular depth when captures are available (https://www.chessprogramming.org/Quiescence_Search)
+- [ ] Order moves before searching via heuristics to improve alpha-beta pruning
+- [ ] Improve static evaluation using pawn structure
+- [ ] Improve endgame play by encouraging the king to the centre of the board and encouraging pawns to promote
+- [ ] Incrementally update game information such as zobrist hash, material count, and other evaluation information
+- [ ] Implement a system to test the performance of the generated moves
+- [ ] Maybe have some way to perform a search using iterative deepening?
+- [ ] Use an opening database to improve opening play
+- [ ] Cache transposition table across searches
+- [ ] Search deeper for certain "more interesting" moves: https://www.chessprogramming.org/Extensions
+- [ ] Precalculate various pieces of data to avoid calculations when searching or evaluating (e.g. distance to edge)
+- [ ] Use bitboards for efficient calculations
