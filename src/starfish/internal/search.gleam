@@ -3,16 +3,13 @@ import gleam/option.{type Option, None, Some}
 import starfish/internal/evaluate
 import starfish/internal/game.{type Game}
 import starfish/internal/hash
-import starfish/internal/move
+import starfish/internal/move.{type Move}
 
-/// Not really infinity, but a high enough number that nothing but explicit 
+/// Not really infinity, but a high enough number that nothing but explicit
 /// references to it will reach it.
 const infinity = 1_000_000_000
 
 const checkmate = -1_000_000
-
-type Move =
-  move.Move(move.Legal)
 
 pub fn best_move(game: Game, depth: Int) -> Result(Move, Nil) {
   use <- bool.guard(depth < 1, Error(Nil))

@@ -8,17 +8,9 @@ import starfish/internal/search
 pub type Game =
   game.Game
 
-/// A single move on the chess board. `Move(Legal)` represents a move which has
-/// been verified to be legal for a particular position. `Move(Valid)` is a move
-/// which is syntactically valid, but is not necessarily legal to play.
-pub type Move(validity) =
-  move.Move(validity)
-
-pub type Legal =
-  move.Legal
-
-pub type Valid =
-  move.Valid
+/// A single legal move on the chess board.
+pub type Move =
+  move.Move
 
 /// The [FEN string](https://en.wikipedia.org/wiki/Forsyth%E2%80%93Edwards_Notation)
 /// representing the initial position of a chess game.
@@ -28,13 +20,13 @@ pub const starting_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0
 /// the input, meaning if a FEN string is partially incomplete (e.g. missing the
 /// half-move and full-move counters at the end), it will fill it in with the
 /// default values of the starting position.
-/// 
+///
 /// For strict parsing, see [`try_from_fen`](#try_from_fen).
-/// 
+///
 /// ## Examples
-/// 
+///
 /// The following expressions are all equivalent:
-/// 
+///
 /// ```gleam
 /// starfish.new()
 /// starfish.from_fen(starfish.starting_fen)
@@ -76,13 +68,13 @@ pub type FenParseError {
 /// Tries to parse a game from a FEN string, returning an error if it doesn't
 /// follow standard FEN notation. For more lenient parsing, see [`from_fen`](
 /// #from_fen).
-/// 
+///
 /// ## Examples
-/// 
+///
 /// ```gleam
 /// let assert Ok(start_pos) = starfish.try_from_fen(starfish.starting_fen)
 /// assert start_pos == starfish.new()
-/// 
+///
 /// let assert Error(starfish.ExpectedSpaceAfterSegment) =
 ///   starfish.try_from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR")
 /// ```
@@ -112,9 +104,9 @@ pub fn new() -> Game {
 }
 
 /// Convert a game into its FEN string representation.
-/// 
+///
 /// ## Examples
-/// 
+///
 /// ```gleam
 /// assert starfish.to_fen(starfish.new()) == starfish.starting_fen
 /// ```
@@ -122,19 +114,19 @@ pub fn to_fen(game: Game) -> String {
   game.to_fen(game)
 }
 
-pub fn legal_moves(game: Game) -> List(Move(Legal)) {
+pub fn legal_moves(game: Game) -> List(Move) {
   move.legal(game)
 }
 
-pub fn search(game: Game, to_depth depth: Int) -> Result(Move(Legal), Nil) {
+pub fn search(game: Game, to_depth depth: Int) -> Result(Move, Nil) {
   search.best_move(game, depth)
 }
 
-pub fn apply_move(game: Game, move: Move(Legal)) -> Game {
+pub fn apply_move(game: Game, move: Move) -> Game {
   move.apply(game, move)
 }
 
-pub fn to_standard_algebraic_notation(move: Move(a)) -> String {
+pub fn to_standard_algebraic_notation(move: Move) -> String {
   todo
 }
 
@@ -142,25 +134,21 @@ pub fn to_standard_algebraic_notation(move: Move(a)) -> String {
 /// https://en.wikipedia.org/wiki/Algebraic_notation_(chess)#Long_algebraic_notation),
 /// specifically the UCI format, containing the start and end positions. For
 /// example, `e2e4` or `c7d8q`.
-pub fn to_long_algebraic_notation(move: Move(a)) -> String {
+pub fn to_long_algebraic_notation(move: Move) -> String {
   move.to_long_algebraic_notation(move)
 }
 
 /// Parses a move from long algebraic notation, in the same format as
-/// [`to_long_algebraic_notation`](#to_long_algebraic_notation).
-pub fn parse_long_algebraic_notation(string: String) -> Result(Move(Valid), Nil) {
-  move.from_long_algebraic_notation(string)
+/// [`to_long_algebraic_notation`](#to_long_algebraic_notation). Returns an error
+/// if the syntax is invalid or the move is not legal.
+pub fn parse_long_algebraic_notation(
+  string: String,
+  game: Game,
+) -> Result(Move, Nil) {
+  move.from_long_algebraic_notation(string, game)
 }
 
-pub fn parse_move(move: String, game: Game) -> Result(Move(Valid), Nil) {
-  todo
-}
-
-pub fn parse_legal_move(string: String, game: Game) -> Result(Move(Legal), Nil) {
-  string |> parse_long_algebraic_notation |> result.try(validate_move(_, game))
-}
-
-pub fn validate_move(move: Move(a), game: Game) -> Result(Move(Legal), Nil) {
+pub fn parse_move(move: String, game: Game) -> Result(Move, Nil) {
   todo
 }
 

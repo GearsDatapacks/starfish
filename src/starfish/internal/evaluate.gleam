@@ -7,10 +7,7 @@ import starfish/internal/piece_table
 
 /// Statically evaluates a position. Does not take into account checkmate or
 /// stalemate, those must be accounted for beforehand.
-pub fn evaluate(
-  game: game.Game,
-  legal_moves: List(move.Move(move.Legal)),
-) -> Int {
+pub fn evaluate(game: game.Game, legal_moves: List(move.Move)) -> Int {
   evaluate_position(game) + list.length(legal_moves)
 }
 

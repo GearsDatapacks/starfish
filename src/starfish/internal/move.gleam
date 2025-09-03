@@ -10,11 +10,7 @@ import starfish/internal/hash
 import starfish/internal/move/attack
 import starfish/internal/move/direction.{type Direction}
 
-pub type Valid
-
-pub type Legal
-
-pub type Move(validity) {
+pub type Move {
   Castle(from: Int, to: Int)
   Move(from: Int, to: Int)
   Capture(from: Int, to: Int)
@@ -22,7 +18,7 @@ pub type Move(validity) {
   Promotion(from: Int, to: Int, piece: board.Piece)
 }
 
-pub fn legal(game: Game) -> List(Move(Legal)) {
+pub fn legal(game: Game) -> List(Move) {
   use moves, position, #(piece, colour) <- dict.fold(game.board, [])
 
   case colour == game.to_move {
@@ -82,8 +78,8 @@ fn moves_for_piece(
   game: Game,
   position: Int,
   piece: board.Piece,
-  moves: List(Move(Legal)),
-) -> List(Move(Legal)) {
+  moves: List(Move),
+) -> List(Move) {
   case piece {
     board.Bishop ->
       sliding_moves(game, position, moves, direction.bishop_directions)
@@ -98,11 +94,7 @@ fn moves_for_piece(
   }
 }
 
-fn pawn_moves(
-  game: Game,
-  position: Int,
-  moves: List(Move(Legal)),
-) -> List(Move(Legal)) {
+fn pawn_moves(game: Game, position: Int, moves: List(Move)) -> List(Move) {
   let #(forward, left, right, promotion_rank) = case game.to_move {
     board.Black -> #(
       direction.down,
@@ -216,19 +208,19 @@ fn en_passant_is_valid(game: Game, position: Int, new_position: Int) -> Bool {
 /// En passant needs to be checked slightly different to other moves. For example,
 /// if a row of the board looks something like this, after the black pawn having
 /// moved two squares:
-/// 
+///
 /// ```txt
 /// | K |   | p | P |   |   | r |   |
 /// ```
-/// 
+///
 /// Here, the white pawn is not pinned by the black rook, so it can safely move
 /// forwards. However, if it were to perform en passant and capture the black
 /// pawn, the king would be in check. Here, we check for this case.
-/// 
+///
 /// To perform the check, we cast out rays on either side of the en passant pair.
 /// If we hit the king, as well as a rook or a queen of the opposite colour, then
 /// en passant is not valid.
-/// 
+///
 fn in_check_after_en_passant(
   game: Game,
   position: Int,
@@ -296,9 +288,9 @@ fn in_check_after_en_passant_loop(
 fn add_promotions(
   from: Int,
   to: Int,
-  moves: List(Move(Legal)),
+  moves: List(Move),
   pieces: List(board.Piece),
-) -> List(Move(Legal)) {
+) -> List(Move) {
   case pieces {
     [] -> moves
     [piece, ..pieces] ->
@@ -309,9 +301,9 @@ fn add_promotions(
 fn knight_moves(
   game: Game,
   position: Int,
-  moves: List(Move(Legal)),
+  moves: List(Move),
   directions: List(Direction),
-) -> List(Move(Legal)) {
+) -> List(Move) {
   case directions {
     [] -> moves
     [direction, ..directions] -> {
@@ -338,9 +330,9 @@ fn knight_moves(
 fn king_moves(
   game: Game,
   position: Int,
-  moves: List(Move(Legal)),
+  moves: List(Move),
   directions: List(Direction),
-) -> List(Move(Legal)) {
+) -> List(Move) {
   let moves = regular_king_moves(game, position, moves, directions)
 
   // If we're in check, castling is not valid.
@@ -385,9 +377,9 @@ fn king_moves(
 fn regular_king_moves(
   game: Game,
   position: Int,
-  moves: List(Move(Legal)),
+  moves: List(Move),
   directions: List(Direction),
-) -> List(Move(Legal)) {
+) -> List(Move) {
   case directions {
     [] -> moves
     [direction, ..directions] -> {
@@ -414,9 +406,9 @@ fn regular_king_moves(
 fn sliding_moves(
   game: Game,
   position: Int,
-  moves: List(Move(Legal)),
+  moves: List(Move),
   directions: List(Direction),
-) -> List(Move(Legal)) {
+) -> List(Move) {
   case directions {
     [] -> moves
     [direction, ..directions] ->
@@ -434,8 +426,8 @@ fn sliding_moves_in_direction(
   start_position: Int,
   position: Int,
   direction: Direction,
-  moves: List(Move(Legal)),
-) -> List(Move(Legal)) {
+  moves: List(Move),
+) -> List(Move) {
   let new_position = direction.in_direction(position, direction)
   case board.get(game.board, new_position) {
     board.Empty ->
@@ -458,7 +450,7 @@ fn sliding_moves_in_direction(
   }
 }
 
-pub fn apply(game: Game, move: Move(Legal)) -> game.Game {
+pub fn apply(game: Game, move: Move) -> game.Game {
   case move {
     Capture(from:, to:) -> do_apply(game, from, to, False, None, True)
     Castle(from:, to:) -> apply_castle(game, from, to, board.file(to) == 2)
@@ -644,7 +636,7 @@ fn remove_castling(castling: game.Castling, position: Int) -> game.Castling {
   }
 }
 
-pub fn to_long_algebraic_notation(move: Move(a)) -> String {
+pub fn to_long_algebraic_notation(move: Move) -> String {
   let from = board.position_to_string(move.from)
   let to = board.position_to_string(move.to)
   let extra = case move {
@@ -663,15 +655,38 @@ pub fn to_long_algebraic_notation(move: Move(a)) -> String {
   from <> to <> extra
 }
 
-pub fn from_long_algebraic_notation(string: String) -> Result(Move(Valid), Nil) {
+// TODO: can we do this without calculating every legal move? We can probably just
+// calculate legal moves for the specific square we need.
+pub fn from_long_algebraic_notation(
+  string: String,
+  game: Game,
+) -> Result(Move, Nil) {
   use #(from, string) <- result.try(board.parse_position(string))
   use #(to, string) <- result.try(board.parse_position(string))
-  case string {
-    "" -> Ok(Move(from:, to:))
-    "b" | "B" -> Ok(Promotion(from:, to:, piece: board.Bishop))
-    "n" | "N" -> Ok(Promotion(from:, to:, piece: board.Knight))
-    "q" | "Q" -> Ok(Promotion(from:, to:, piece: board.Queen))
-    "r" | "R" -> Ok(Promotion(from:, to:, piece: board.Rook))
+  use promotion_piece <- result.try(case string {
+    "" -> Ok(None)
+    "b" | "B" -> Ok(Some(board.Bishop))
+    "n" | "N" -> Ok(Some(board.Knight))
+    "q" | "Q" -> Ok(Some(board.Queen))
+    "r" | "R" -> Ok(Some(board.Rook))
+    _ -> Error(Nil)
+  })
+
+  let legal_moves = legal(game)
+
+  let valid_moves =
+    list.filter(legal_moves, fn(move) {
+      move.from == from
+      && move.to == to
+      && case move, promotion_piece {
+        Promotion(..), None -> False
+        Promotion(piece:, ..), Some(promotion) -> piece == promotion
+        _, _ -> promotion_piece == None
+      }
+    })
+
+  case valid_moves {
+    [move] -> Ok(move)
     _ -> Error(Nil)
   }
 }

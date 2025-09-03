@@ -390,15 +390,15 @@ fn sliding_check_block_line_loop(
 /// When the king is in check, it cannot move into any squares that are attacked
 /// by other pieces. However, there's another case too. Imagine one row of the
 /// board looks like this:
-/// 
+///
 /// ```txt
 /// | R |   |   |   | k | B |   |   |
 /// ```
-/// 
+///
 /// Here, the white bishop isn't protected by the rook. However, if the king were
 /// to capture the bishop, the rook now is attacking that square, so the king is
 /// still in check. For this reason, we need to calculate all the squares just
-/// past the king in a check line, and prevent the king from moving there. 
+/// past the king in a check line, and prevent the king from moving there.
 fn get_check_attack_squares(
   board: Board,
   attacking: board.Colour,
