@@ -1,3 +1,4 @@
+import birl
 import gleam/bool
 import gleam/result
 import starfish/internal/board
@@ -118,8 +119,30 @@ pub fn legal_moves(game: Game) -> List(Move) {
   move.legal(game)
 }
 
-pub fn search(game: Game, to_depth depth: Int) -> Result(Move, Nil) {
-  search.best_move(game, depth)
+/// Used to determine how long to search positions
+pub type SearchCutoff {
+  /// Search to a specific depth
+  Depth(depth: Int)
+  /// Search for a given number of milliseconds.
+  /// 
+  /// NOTE: The process will usually take slightly longer than the specified time.
+  /// It would be expensive to check the time every millisecond, so it is checked
+  /// periodically. This is usually less than 10ms, but it can be higher than that.
+  Time(milliseconds: Int)
+}
+
+/// Finds the best move for a given position, or returns an error if no moves are
+/// legal (If it's checkmate or stalemate)
+pub fn search(game: Game, until cutoff: SearchCutoff) -> Result(Move, Nil) {
+  let until = case cutoff {
+    Depth(depth:) -> fn(current_depth) { current_depth > depth }
+    Time(milliseconds:) -> {
+      let end_time = birl.monotonic_now() + milliseconds * 1000
+      fn(_) { birl.monotonic_now() >= end_time }
+    }
+  }
+
+  search.best_move(game, until)
 }
 
 pub fn apply_move(game: Game, move: Move) -> Game {

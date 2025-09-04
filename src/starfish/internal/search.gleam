@@ -11,16 +11,53 @@ const infinity = 1_000_000_000
 
 const checkmate = -1_000_000
 
-pub fn best_move(game: Game, depth: Int) -> Result(Move, Nil) {
-  use <- bool.guard(depth < 1, Error(Nil))
-  search_top_level(
-    game,
-    hash.new_table(),
-    depth,
-    move.legal(game),
-    None,
-    -infinity,
-  )
+type Until =
+  fn(Int) -> Bool
+
+pub fn best_move(game: Game, until: Until) -> Result(Move, Nil) {
+  use <- bool.guard(until(0), Error(Nil))
+  let legal_moves = move.legal(game)
+  use <- bool.guard(legal_moves == [], Error(Nil))
+  iterative_deepening(game, 1, None, legal_moves, hash.new_table(), until)
+}
+
+fn iterative_deepening(
+  game: Game,
+  depth: Int,
+  best_move: Option(Move),
+  legal_moves: List(Move),
+  cached_positions: hash.Table,
+  until: Until,
+) -> Result(Move, Nil) {
+  use <- bool.guard(until(depth), option.to_result(best_move, Nil))
+
+  let move_result =
+    search_top_level(
+      game,
+      cached_positions,
+      depth,
+      legal_moves,
+      None,
+      -infinity,
+      until,
+    )
+
+  case move_result {
+    Error(_) -> option.to_result(best_move, Nil)
+    Ok(TopLevelSearchResult(best_move:, cached_positions:)) ->
+      iterative_deepening(
+        game,
+        depth + 1,
+        Some(best_move),
+        legal_moves,
+        cached_positions,
+        until,
+      )
+  }
+}
+
+type TopLevelSearchResult {
+  TopLevelSearchResult(best_move: Move, cached_positions: hash.Table)
 }
 
 type SearchResult {
@@ -28,6 +65,7 @@ type SearchResult {
     eval: Int,
     cached_positions: hash.Table,
     eval_kind: hash.CacheKind,
+    finished: Bool,
   )
 }
 
@@ -44,15 +82,17 @@ fn search_top_level(
   legal_moves: List(Move),
   best_move: Option(Move),
   best_eval: Int,
-) -> Result(Move, Nil) {
+  until: Until,
+) -> Result(TopLevelSearchResult, Nil) {
   case legal_moves {
     [] ->
       case best_move {
         None -> Error(Nil)
-        Some(best_move) -> Ok(best_move)
+        Some(best_move) ->
+          Ok(TopLevelSearchResult(best_move:, cached_positions:))
       }
     [move, ..moves] -> {
-      let SearchResult(eval:, cached_positions:, ..) =
+      let SearchResult(eval:, cached_positions:, eval_kind: _, finished:) =
         search(
           move.apply(game, move),
           cached_positions,
@@ -60,7 +100,14 @@ fn search_top_level(
           -infinity,
           -best_eval,
           0,
+          until,
         )
+
+      use <- bool.guard(!finished, case best_move {
+        None -> Error(Nil)
+        Some(best_move) ->
+          Ok(TopLevelSearchResult(best_move:, cached_positions:))
+      })
 
       let eval = -eval
 
@@ -75,6 +122,7 @@ fn search_top_level(
         moves,
         best_move,
         best_eval,
+        until,
       )
     }
   }
@@ -87,12 +135,18 @@ fn search(
   best_eval: Int,
   best_opponent_move: Int,
   depth_searched: Int,
+  until: Until,
 ) -> SearchResult {
+  use <- bool.guard(
+    until(depth),
+    SearchResult(0, cached_positions, hash.Exact, False),
+  )
+
   // If we have reached fifty moves, the game is already a draw, so there's no
   // point searching further.
   use <- bool.guard(
     game.half_moves >= 50,
-    SearchResult(0, cached_positions, hash.Exact),
+    SearchResult(0, cached_positions, hash.Exact, True),
   )
 
   case
@@ -105,7 +159,8 @@ fn search(
       best_opponent_move,
     )
   {
-    Ok(#(eval, eval_kind)) -> SearchResult(eval:, cached_positions:, eval_kind:)
+    Ok(#(eval, eval_kind)) ->
+      SearchResult(eval:, cached_positions:, eval_kind:, finished: True)
     Error(_) ->
       case move.legal(game) {
         // If the game is in a checkmate or stalemate position, the game is over, so
@@ -126,7 +181,12 @@ fn search(
               hash.Exact,
               eval,
             )
-          SearchResult(eval:, cached_positions:, eval_kind: hash.Exact)
+          SearchResult(
+            eval:,
+            cached_positions:,
+            eval_kind: hash.Exact,
+            finished: True,
+          )
         }
         moves ->
           case depth {
@@ -142,10 +202,15 @@ fn search(
                   hash.Exact,
                   eval,
                 )
-              SearchResult(eval:, cached_positions:, eval_kind: hash.Exact)
+              SearchResult(
+                eval:,
+                cached_positions:,
+                eval_kind: hash.Exact,
+                finished: True,
+              )
             }
             _ -> {
-              let SearchResult(eval:, cached_positions:, eval_kind:) =
+              let SearchResult(eval:, cached_positions:, eval_kind:, finished:) as result =
                 search_loop(
                   game,
                   cached_positions,
@@ -155,7 +220,10 @@ fn search(
                   best_opponent_move,
                   depth_searched,
                   hash.Ceiling,
+                  until,
                 )
+
+              use <- bool.guard(!finished, result)
 
               let cached_positions =
                 hash.cache(
@@ -167,7 +235,7 @@ fn search(
                   eval,
                 )
 
-              SearchResult(eval:, cached_positions:, eval_kind:)
+              SearchResult(eval:, cached_positions:, eval_kind:, finished:)
             }
           }
       }
@@ -187,13 +255,25 @@ fn search_loop(
   best_opponent_move: Int,
   depth_searched: Int,
   eval_kind: hash.CacheKind,
+  until: Until,
 ) -> SearchResult {
   case moves {
-    [] -> SearchResult(eval: best_eval, cached_positions:, eval_kind:)
+    [] ->
+      SearchResult(
+        eval: best_eval,
+        cached_positions:,
+        eval_kind:,
+        finished: True,
+      )
     [move, ..moves] -> {
       // Evaluate the position for the opponent. The negative of the opponent's
       // eval is our eval.
-      let SearchResult(eval:, cached_positions:, eval_kind: search_kind) =
+      let SearchResult(
+        eval:,
+        cached_positions:,
+        eval_kind: search_kind,
+        finished:,
+      ) as result =
         search(
           move.apply(game, move),
           cached_positions,
@@ -201,13 +281,21 @@ fn search_loop(
           -best_opponent_move,
           -best_eval,
           depth_searched + 1,
+          until,
         )
+
+      use <- bool.guard(!finished, result)
 
       let eval = -eval
 
       use <- bool.guard(
         eval >= best_opponent_move,
-        SearchResult(best_opponent_move, cached_positions, hash.Floor),
+        SearchResult(
+          best_opponent_move,
+          cached_positions,
+          hash.Floor,
+          finished: True,
+        ),
       )
 
       let #(best_eval, eval_kind) = case eval > best_eval {
@@ -224,6 +312,7 @@ fn search_loop(
         best_opponent_move,
         depth_searched,
         eval_kind,
+        until,
       )
     }
   }
