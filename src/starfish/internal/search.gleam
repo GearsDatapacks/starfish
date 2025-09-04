@@ -1,9 +1,13 @@
 import gleam/bool
+import gleam/int
+import gleam/list
 import gleam/option.{type Option, None, Some}
+import starfish/internal/board
 import starfish/internal/evaluate
 import starfish/internal/game.{type Game}
 import starfish/internal/hash
 import starfish/internal/move.{type Move}
+import starfish/internal/piece_table
 
 /// Not really infinity, but a high enough number that nothing but explicit
 /// references to it will reach it.
@@ -16,7 +20,7 @@ type Until =
 
 pub fn best_move(game: Game, until: Until) -> Result(Move, Nil) {
   use <- bool.guard(until(0), Error(Nil))
-  let legal_moves = move.legal(game)
+  let legal_moves = order_moves(game)
   use <- bool.guard(legal_moves == [], Error(Nil))
   iterative_deepening(game, 1, None, legal_moves, hash.new_table(), until)
 }
@@ -25,7 +29,7 @@ fn iterative_deepening(
   game: Game,
   depth: Int,
   best_move: Option(Move),
-  legal_moves: List(Move),
+  legal_moves: List(#(Move, Int)),
   cached_positions: hash.Table,
   until: Until,
 ) -> Result(Move, Nil) {
@@ -49,7 +53,9 @@ fn iterative_deepening(
         game,
         depth + 1,
         Some(best_move),
-        legal_moves,
+        // TODO: Instead of just sorting the best move to the front, maybe we
+        // can sort all the moves by evaluation?
+        reorder_moves(legal_moves, best_move),
         cached_positions,
         until,
       )
@@ -79,7 +85,7 @@ fn search_top_level(
   game: Game,
   cached_positions: hash.Table,
   depth: Int,
-  legal_moves: List(Move),
+  legal_moves: List(#(Move, Int)),
   best_move: Option(Move),
   best_eval: Int,
   until: Until,
@@ -91,7 +97,7 @@ fn search_top_level(
         Some(best_move) ->
           Ok(TopLevelSearchResult(best_move:, cached_positions:))
       }
-    [move, ..moves] -> {
+    [#(move, _), ..moves] -> {
       let SearchResult(eval:, cached_positions:, eval_kind: _, finished:) =
         search(
           move.apply(game, move),
@@ -162,7 +168,7 @@ fn search(
     Ok(#(eval, eval_kind)) ->
       SearchResult(eval:, cached_positions:, eval_kind:, finished: True)
     Error(_) ->
-      case move.legal(game) {
+      case order_moves(game) {
         // If the game is in a checkmate or stalemate position, the game is over, so
         // we stop searching.
         [] -> {
@@ -245,7 +251,7 @@ fn search(
 fn search_loop(
   game: Game,
   cached_positions: hash.Table,
-  moves: List(Move),
+  moves: List(#(Move, Int)),
   depth: Int,
   // The best evaluation we've encountered so far.
   best_eval: Int,
@@ -265,7 +271,7 @@ fn search_loop(
         eval_kind:,
         finished: True,
       )
-    [move, ..moves] -> {
+    [#(move, _), ..moves] -> {
       // Evaluate the position for the opponent. The negative of the opponent's
       // eval is our eval.
       let SearchResult(
@@ -316,4 +322,93 @@ fn search_loop(
       )
     }
   }
+}
+
+/// Sort moves by their guessed evaluation. We return the guesses with the moves
+/// in order to save iterating the list a second time. The guesses are discarded
+/// after this point.
+fn order_moves(game: Game) -> List(#(Move, Int)) {
+  game
+  |> move.legal
+  |> collect_guessed_eval(game, [])
+  |> list.sort(fn(a, b) { int.compare(a.1, b.1) })
+}
+
+/// Reorder already ordered moves to move the best move to the front of the list,
+/// so that it will be searched first on the next iteration.
+fn reorder_moves(
+  moves: List(#(Move, Int)),
+  best_move: Move,
+) -> List(#(Move, Int)) {
+  let moves_without_best = list.filter(moves, fn(pair) { pair.0 != best_move })
+  [#(best_move, 0), ..moves_without_best]
+}
+
+fn collect_guessed_eval(
+  moves: List(Move),
+  game: Game,
+  acc: List(#(Move, Int)),
+) -> List(#(Move, Int)) {
+  case moves {
+    [] -> acc
+    [move, ..moves] ->
+      collect_guessed_eval(moves, game, [#(move, guess_eval(game, move)), ..acc])
+  }
+}
+
+/// Rate captures and promotions higher than quiet moves
+const capture_promotion_bonus = 10_000
+
+/// Guess the evaluation of a move so we can hopefully search moves in a better
+/// order than random. Searching better moves first improves alpha-beta pruning,
+/// allowing us to search more positions.
+fn guess_eval(game: Game, move: Move) -> Int {
+  let assert board.Occupied(piece:, colour:) = board.get(game.board, move.from)
+    as "Invalid move trying to move empty piece"
+
+  let moving_piece = case move {
+    move.Promotion(piece:, ..) -> piece
+    move.Capture(..) | move.Castle(..) | move.EnPassant(..) | move.Move(..) ->
+      piece
+  }
+
+  let from_score = piece_table.piece_score(moving_piece, colour, move.from)
+  let to_score = piece_table.piece_score(moving_piece, colour, move.to)
+
+  let position_improvement = to_score - from_score
+  let move_specific_score = case move {
+    // TODO store information in moves so we don't have to retrieve it from the
+    // board every time.
+    move.Capture(..) -> {
+      let assert board.Occupied(piece: captured_piece, colour: _) =
+        board.get(game.board, move.to)
+        as "Invalid capture moving to empty square"
+
+      capture_promotion_bonus
+      // Capturing a more valuable piece is better, and using a less valuable
+      // piece to capture is usually better. However, we prioritise the value of
+      // the captured piece.
+      + board.piece_value(captured_piece)
+      * 2
+      * -board.piece_value(moving_piece)
+    }
+    move.EnPassant(..) -> capture_promotion_bonus
+    move.Promotion(..) -> {
+      // Promotions can also be captures
+      let capture_value = case board.get(game.board, move.to) {
+        board.Empty | board.OffBoard -> 0
+        board.Occupied(piece: captured_piece, colour: _) ->
+          board.piece_value(captured_piece)
+          * 2
+          - board.piece_value(moving_piece)
+      }
+
+      // Promoting to a more valuable piece is usually better
+      capture_promotion_bonus + capture_value + board.piece_value(move.piece)
+    }
+    // For castling and quite moves, we can't easily predict the score
+    move.Castle(..) | move.Move(..) -> 0
+  }
+
+  position_improvement + move_specific_score
 }

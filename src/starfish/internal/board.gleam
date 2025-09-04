@@ -33,6 +33,17 @@ pub type Piece {
   King
 }
 
+pub fn piece_value(piece: Piece) -> Int {
+  case piece {
+    Pawn -> 100
+    Knight -> 300
+    Bishop -> 300
+    Rook -> 500
+    Queen -> 900
+    King -> 1000
+  }
+}
+
 pub const pawn_promotions = [Bishop, Knight, Rook, Queen]
 
 pub type Colour {
