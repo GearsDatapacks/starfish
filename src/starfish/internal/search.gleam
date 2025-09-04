@@ -53,8 +53,6 @@ fn iterative_deepening(
         game,
         depth + 1,
         Some(best_move),
-        // TODO: Instead of just sorting the best move to the front, maybe we
-        // can sort all the moves by evaluation?
         reorder_moves(legal_moves, best_move),
         cached_positions,
         until,
@@ -110,7 +108,18 @@ fn search_top_level(
         )
 
       use <- bool.guard(!finished, case best_move {
+        // If we had to stop this search before searching any positions, we return
+        // an error, and instead we will use the best move from the previous
+        // iteration.
         None -> Error(Nil)
+        // Even if the search didn't complete fully, we can still use the best move.
+        // Because we always search the best move first, we will be in one of two
+        // situations:
+        // - The new search still thinks the best move from the previous search is
+        //   preferable, in which case it's the same result
+        // - The new search has found a better move than the previous best move, in
+        //   which case we've found a better move to play
+        // Either way, it's advantageous to use the best move from incomplete searches.
         Some(best_move) ->
           Ok(TopLevelSearchResult(best_move:, cached_positions:))
       })
@@ -336,6 +345,9 @@ fn order_moves(game: Game) -> List(#(Move, Int)) {
 
 /// Reorder already ordered moves to move the best move to the front of the list,
 /// so that it will be searched first on the next iteration.
+/// It has been tested, and only pushing the first move to the front of the list
+/// results in better performance than sorting all moves by their calculated
+/// evaluation.
 fn reorder_moves(
   moves: List(#(Move, Int)),
   best_move: Move,
