@@ -659,7 +659,7 @@ pub fn to_long_algebraic_notation(move: Move) -> String {
 // calculate legal moves for the specific square we need.
 pub fn from_long_algebraic_notation(
   string: String,
-  game: Game,
+  legal_moves: List(Move),
 ) -> Result(Move, Nil) {
   use #(from, string) <- result.try(board.parse_position(string))
   use #(to, string) <- result.try(board.parse_position(string))
@@ -671,8 +671,6 @@ pub fn from_long_algebraic_notation(
     "r" | "R" -> Ok(Some(board.Rook))
     _ -> Error(Nil)
   })
-
-  let legal_moves = legal(game)
 
   let valid_moves =
     list.filter(legal_moves, fn(move) {
@@ -687,6 +685,286 @@ pub fn from_long_algebraic_notation(
 
   case valid_moves {
     [move] -> Ok(move)
+    _ -> Error(Nil)
+  }
+}
+
+pub fn from_standard_algebraic_notation(
+  move: String,
+  game: Game,
+  legal_moves: List(Move),
+) -> Result(Move, Nil) {
+  case parse_special_move(move, game, legal_moves) {
+    Illegal -> Error(Nil)
+    Legal(move) -> Ok(move)
+    Invalid -> {
+      let #(piece_kind, move) = case move {
+        "R" <> move -> #(board.Rook, move)
+        "B" <> move -> #(board.Bishop, move)
+        "N" <> move -> #(board.Knight, move)
+        "K" <> move -> #(board.King, move)
+        "Q" <> move -> #(board.Queen, move)
+        _ -> #(board.Pawn, move)
+      }
+
+      // Pawn moves have entirely different syntax than non-pawn moves
+      use <- bool.lazy_guard(piece_kind == board.Pawn, fn() {
+        parse_pawn_move(move, game, legal_moves)
+      })
+
+      // In order to determine which move syntax this is, we need to parse the
+      // first two characters and match on what they are.
+      use #(first, move) <- result.try(parse_move_part(move))
+      use #(second, move) <- result.try(parse_move_part(move))
+
+      use #(from_file, from_rank, capture, to_file, to_rank, move) <- result.try(
+        case first, second {
+          // `xx` is not an allowed move
+          CaptureSpecifier, CaptureSpecifier -> Error(Nil)
+          // We disambiguate the file and it's a capture (e.g. `Baxc6`)
+          File(file), CaptureSpecifier -> {
+            let from_file = Some(file)
+            let from_rank = None
+            let capture = True
+            use #(to_file, move) <- result.try(parse_file(move))
+            use #(to_rank, move) <- result.try(parse_rank(move))
+
+            Ok(#(from_file, from_rank, capture, to_file, to_rank, move))
+          }
+          // We disambiguate the rank and it's a capture (e.g. `R5xc4`)
+          Rank(rank), CaptureSpecifier -> {
+            let from_file = None
+            let from_rank = Some(rank)
+            let capture = True
+            use #(to_file, move) <- result.try(parse_file(move))
+            use #(to_rank, move) <- result.try(parse_rank(move))
+
+            Ok(#(from_file, from_rank, capture, to_file, to_rank, move))
+          }
+          // It's a capture, and we've parsed the file of the destination (e.g.
+          // `Bxa5`)
+          CaptureSpecifier, File(to_file) -> {
+            let from_file = None
+            let from_rank = None
+            let capture = True
+            use #(to_rank, move) <- result.try(parse_rank(move))
+
+            Ok(#(from_file, from_rank, capture, to_file, to_rank, move))
+          }
+          // We disambiguate the file and we've parsed the file of the destination
+          // (e.g. `Qhd4`)
+          File(from_file), File(to_file) -> {
+            let from_file = Some(from_file)
+            let from_rank = None
+            let capture = False
+            use #(to_rank, move) <- result.try(parse_rank(move))
+
+            Ok(#(from_file, from_rank, capture, to_file, to_rank, move))
+          }
+          // We disambiguate the rank and we've parsed the file of the destination
+          // (e.g. `R7d2`)
+          Rank(rank), File(to_file) -> {
+            let from_file = None
+            let from_rank = Some(rank)
+            let capture = False
+            use #(to_rank, move) <- result.try(parse_rank(move))
+
+            Ok(#(from_file, from_rank, capture, to_file, to_rank, move))
+          }
+          // Capture followed by a rank is not allowed, e.g. `Rx1`
+          CaptureSpecifier, Rank(_) -> Error(Nil)
+          // We've parsed the file and rank, and there's no more move to parse,
+          // so we're done. (e.g. `Nf3`)
+          File(file), Rank(rank) if move == "" ->
+            Ok(#(None, None, False, file, rank, move))
+          // We've disambiguated the rank and file, and we still need to parse
+          // the rest of the move. (e.g. `Qh4xe1`)
+          File(from_file), Rank(from_rank) ->
+            case parse_move_part(move) {
+              Ok(#(CaptureSpecifier, move)) -> {
+                let from_file = Some(from_file)
+                let from_rank = Some(from_rank)
+                let capture = True
+                use #(to_file, move) <- result.try(parse_file(move))
+                use #(to_rank, move) <- result.try(parse_rank(move))
+
+                Ok(#(from_file, from_rank, capture, to_file, to_rank, move))
+              }
+              Ok(#(File(to_file), _)) -> {
+                let from_file = Some(from_file)
+                let from_rank = Some(from_rank)
+                let capture = False
+                use #(to_rank, move) <- result.try(parse_rank(move))
+
+                Ok(#(from_file, from_rank, capture, to_file, to_rank, move))
+              }
+              Ok(#(Rank(_), _)) | Error(_) -> Error(Nil)
+            }
+          // Two ranks are not allowed, e.g. `R15`
+          Rank(_), Rank(_) -> Error(Nil)
+        },
+      )
+
+      use <- bool.guard(move != "", Error(Nil))
+
+      let to = board.position(file: to_file, rank: to_rank)
+
+      case get_pieces(game, piece_kind, legal_moves, from_file, from_rank, to) {
+        [from] if capture -> Ok(Capture(from:, to:))
+        [from] -> Ok(Move(from:, to:))
+        // If there is more than one valid move, the notation is ambiguous, and
+        // so we error. If there are no valid moves, we also error.
+        _ -> Error(Nil)
+      }
+    }
+  }
+}
+
+type MovePart {
+  CaptureSpecifier
+  File(Int)
+  Rank(Int)
+}
+
+fn parse_move_part(move: String) -> Result(#(MovePart, String), Nil) {
+  case move {
+    "x" <> move -> Ok(#(CaptureSpecifier, move))
+    _ ->
+      case parse_file(move) {
+        Ok(#(file, move)) -> Ok(#(File(file), move))
+        Error(_) ->
+          case parse_rank(move) {
+            Ok(#(rank, move)) -> Ok(#(Rank(rank), move))
+            Error(Nil) -> Error(Nil)
+          }
+      }
+  }
+}
+
+type SpecialMove {
+  Invalid
+  Illegal
+  Legal(Move)
+}
+
+fn parse_special_move(
+  move: String,
+  game: Game,
+  legal_moves: List(Move),
+) -> SpecialMove {
+  let move = case move {
+    "O-O" | "0-0" if game.to_move == board.White -> Ok(Castle(4, 6))
+    "O-O" | "0-0" -> Ok(Castle(60, 62))
+    "O-O-O" | "0-0-0" if game.to_move == board.White -> Ok(Castle(4, 2))
+    "O-O-O" | "0-0-0" -> Ok(Castle(60, 58))
+    _ -> Error(Nil)
+  }
+  case move {
+    Error(_) -> Invalid
+    Ok(move) ->
+      case list.contains(legal_moves, move) {
+        False -> Illegal
+        True -> Legal(move)
+      }
+  }
+}
+
+fn parse_pawn_move(
+  move: String,
+  game: Game,
+  legal_moves: List(Move),
+) -> Result(Move, Nil) {
+  use #(file, move) <- result.try(parse_file(move))
+
+  use #(from_file, is_capture, to_file, move) <- result.try(case move {
+    "x" <> move ->
+      parse_file(move)
+      |> result.map(fn(pair) {
+        let #(to_file, move) = pair
+        #(Some(file), True, to_file, move)
+      })
+    _ -> Ok(#(None, False, file, move))
+  })
+
+  use #(rank, move) <- result.try(parse_rank(move))
+
+  use promotion <- result.try(case move {
+    "" -> Ok(None)
+    "n" | "N" | "=n" | "=N" -> Ok(Some(board.Knight))
+    "q" | "Q" | "=q" | "=Q" -> Ok(Some(board.Queen))
+    "b" | "B" | "=b" | "=B" -> Ok(Some(board.Bishop))
+    "r" | "R" | "=r" | "=R" -> Ok(Some(board.Rook))
+    _ -> Error(Nil)
+  })
+
+  let to = board.position(file: to_file, rank:)
+
+  case
+    get_pieces(game, board.Pawn, legal_moves, from_file, None, to),
+    promotion
+  {
+    [from], Some(piece) -> Ok(Promotion(from:, to:, piece:))
+    [from], _ if game.en_passant_square == Some(to) -> Ok(EnPassant(from:, to:))
+    [from], _ if is_capture -> Ok(Capture(from:, to:))
+    [from], _ -> Ok(Move(from:, to:))
+    _, _ -> Error(Nil)
+  }
+}
+
+/// Gets the possible destination squares for a move, based on the information
+/// we know.
+fn get_pieces(
+  game: Game,
+  find_piece: board.Piece,
+  legal_moves: List(Move),
+  from_file: option.Option(Int),
+  from_rank: option.Option(Int),
+  to: Int,
+) -> List(Int) {
+  use pieces, position, #(piece, colour) <- dict.fold(game.board, [])
+  let is_valid =
+    colour == game.to_move
+    && piece == find_piece
+    && case from_file {
+      None -> True
+      Some(file) -> file == board.file(position)
+    }
+    && case from_rank {
+      None -> True
+      Some(rank) -> rank == board.rank(position)
+    }
+    && list.any(legal_moves, fn(move) { move.to == to && move.from == position })
+
+  case is_valid {
+    False -> pieces
+    True -> [position, ..pieces]
+  }
+}
+
+fn parse_file(move: String) -> Result(#(Int, String), Nil) {
+  case move {
+    "a" <> move | "A" <> move -> Ok(#(0, move))
+    "b" <> move | "B" <> move -> Ok(#(1, move))
+    "c" <> move | "C" <> move -> Ok(#(2, move))
+    "d" <> move | "D" <> move -> Ok(#(3, move))
+    "e" <> move | "E" <> move -> Ok(#(4, move))
+    "f" <> move | "F" <> move -> Ok(#(5, move))
+    "g" <> move | "G" <> move -> Ok(#(6, move))
+    "h" <> move | "H" <> move -> Ok(#(7, move))
+    _ -> Error(Nil)
+  }
+}
+
+fn parse_rank(move: String) -> Result(#(Int, String), Nil) {
+  case move {
+    "1" <> move -> Ok(#(0, move))
+    "2" <> move -> Ok(#(1, move))
+    "3" <> move -> Ok(#(2, move))
+    "4" <> move -> Ok(#(3, move))
+    "5" <> move -> Ok(#(4, move))
+    "6" <> move -> Ok(#(5, move))
+    "7" <> move -> Ok(#(6, move))
+    "8" <> move -> Ok(#(7, move))
     _ -> Error(Nil)
   }
 }

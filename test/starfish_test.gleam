@@ -80,14 +80,12 @@ pub fn to_long_algebraic_notation_test() {
 }
 
 pub fn parse_long_algebraic_notation_test() {
-  let assert Ok(move) =
-    starfish.parse_long_algebraic_notation("a2a4", starfish.new())
+  let assert Ok(move) = starfish.parse_move("a2a4", starfish.new())
   assert move == move.Move(from: 8, to: 24)
-  let assert Ok(move) =
-    starfish.parse_long_algebraic_notation("g1f3", starfish.new())
+  let assert Ok(move) = starfish.parse_move("g1f3", starfish.new())
   assert move == move.Move(from: 6, to: 21)
   let assert Ok(move) =
-    starfish.parse_long_algebraic_notation(
+    starfish.parse_move(
       "b8c6",
       starfish.from_fen(
         "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
@@ -95,7 +93,7 @@ pub fn parse_long_algebraic_notation_test() {
     )
   assert move == move.Move(from: 57, to: 42)
   let assert Ok(move) =
-    starfish.parse_long_algebraic_notation(
+    starfish.parse_move(
       "B7b5",
       starfish.from_fen(
         "rnbqkbnr/pppppppp/8/8/P7/8/1PPPPPPP/RNBQKBNR b KQkq - 0 1",
@@ -103,7 +101,7 @@ pub fn parse_long_algebraic_notation_test() {
     )
   assert move == move.Move(from: 49, to: 33)
   let assert Ok(move) =
-    starfish.parse_long_algebraic_notation(
+    starfish.parse_move(
       "a5b6",
       starfish.from_fen(
         "rnbqkbnr/p1p1pppp/8/Pp1p4/8/8/1PPPPPPP/RNBQKBNR w KQkq b6 0 3",
@@ -111,7 +109,7 @@ pub fn parse_long_algebraic_notation_test() {
     )
   assert move == move.EnPassant(from: 32, to: 41)
   let assert Ok(move) =
-    starfish.parse_long_algebraic_notation(
+    starfish.parse_move(
       "e1G1",
       starfish.from_fen(
         "rnbqkbnr/pp3ppp/8/2ppp3/4P3/5N2/PPPPBPPP/RNBQK2R w KQkq - 0 4",
@@ -119,7 +117,7 @@ pub fn parse_long_algebraic_notation_test() {
     )
   assert move == move.Castle(from: 4, to: 6)
   let assert Ok(move) =
-    starfish.parse_long_algebraic_notation(
+    starfish.parse_move(
       "e1c1",
       starfish.from_fen(
         "rnbqkbnr/ppp2ppp/8/3pp3/3P4/2N1B3/PPPQPPPP/R3KBNR w KQkq - 0 5",
@@ -127,7 +125,7 @@ pub fn parse_long_algebraic_notation_test() {
     )
   assert move == move.Castle(from: 4, to: 2)
   let assert Ok(move) =
-    starfish.parse_long_algebraic_notation(
+    starfish.parse_move(
       "e8g8",
       starfish.from_fen(
         "rnbqk2r/ppppbppp/5n2/4p3/2PPP3/8/PP3PPP/RNBQKBNR b KQkq - 0 4",
@@ -135,7 +133,7 @@ pub fn parse_long_algebraic_notation_test() {
     )
   assert move == move.Castle(from: 60, to: 62)
   let assert Ok(move) =
-    starfish.parse_long_algebraic_notation(
+    starfish.parse_move(
       "E8C8",
       starfish.from_fen(
         "r3kbnr/pppqpppp/2n1b3/3p4/3PP3/8/PPP2PPP/RNBQKBNR b KQkq - 0 5",
@@ -143,7 +141,7 @@ pub fn parse_long_algebraic_notation_test() {
     )
   assert move == move.Castle(from: 60, to: 58)
   let assert Ok(move) =
-    starfish.parse_long_algebraic_notation(
+    starfish.parse_move(
       "d7c8q",
       starfish.from_fen(
         "rnbq1bnr/pppPkpp1/4p2p/8/8/8/PPPP1PPP/RNBQKBNR w KQ - 1 5",
@@ -151,7 +149,7 @@ pub fn parse_long_algebraic_notation_test() {
     )
   assert move == move.Promotion(from: 51, to: 58, piece: board.Queen)
   let assert Ok(move) =
-    starfish.parse_long_algebraic_notation(
+    starfish.parse_move(
       "d2c1N",
       starfish.from_fen(
         "rnbqkbnr/pppp1ppp/8/8/8/4P2P/PPPpKPP1/RNBQ1BNR b kq - 1 5",
@@ -159,7 +157,7 @@ pub fn parse_long_algebraic_notation_test() {
     )
   assert move == move.Promotion(from: 11, to: 2, piece: board.Knight)
   let assert Ok(move) =
-    starfish.parse_long_algebraic_notation(
+    starfish.parse_move(
       "b7h1",
       starfish.from_fen(
         "rn1qkbnr/pbpppppp/1p6/6P1/8/8/PPPPPP1P/RNBQKBNR b KQkq - 0 3",
@@ -167,14 +165,113 @@ pub fn parse_long_algebraic_notation_test() {
     )
   assert move == move.Capture(from: 49, to: 7)
 
-  let assert Error(Nil) =
-    starfish.parse_long_algebraic_notation("abcd", starfish.new())
-  let assert Error(Nil) =
-    starfish.parse_long_algebraic_notation("e2e4extra", starfish.new())
-  let assert Error(Nil) =
-    starfish.parse_long_algebraic_notation("e2", starfish.new())
-  let assert Error(Nil) =
-    starfish.parse_long_algebraic_notation("Bxe4", starfish.new())
+  let assert Error(Nil) = starfish.parse_move("abcd", starfish.new())
+  let assert Error(Nil) = starfish.parse_move("e2e4extra", starfish.new())
+  let assert Error(Nil) = starfish.parse_move("a1c8", starfish.new())
+}
+
+pub fn parse_standard_algebraic_notation_test() {
+  let assert Ok(move) = starfish.parse_move("a4", starfish.new())
+  assert move == move.Move(from: 8, to: 24)
+  let assert Ok(move) = starfish.parse_move("Nf3", starfish.new())
+  assert move == move.Move(from: 6, to: 21)
+  let assert Ok(move) =
+    starfish.parse_move(
+      "Nc6",
+      starfish.from_fen(
+        "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+      ),
+    )
+  assert move == move.Move(from: 57, to: 42)
+  let assert Ok(move) =
+    starfish.parse_move(
+      "b5",
+      starfish.from_fen(
+        "rnbqkbnr/pppppppp/8/8/P7/8/1PPPPPPP/RNBQKBNR b KQkq - 0 1",
+      ),
+    )
+  assert move == move.Move(from: 49, to: 33)
+  let assert Ok(move) =
+    starfish.parse_move(
+      "axb6",
+      starfish.from_fen(
+        "rnbqkbnr/p1p1pppp/8/Pp1p4/8/8/1PPPPPPP/RNBQKBNR w KQkq b6 0 3",
+      ),
+    )
+  assert move == move.EnPassant(from: 32, to: 41)
+  let assert Ok(move) =
+    starfish.parse_move(
+      "O-O",
+      starfish.from_fen(
+        "rnbqkbnr/pp3ppp/8/2ppp3/4P3/5N2/PPPPBPPP/RNBQK2R w KQkq - 0 4",
+      ),
+    )
+  assert move == move.Castle(from: 4, to: 6)
+  let assert Ok(move) =
+    starfish.parse_move(
+      "O-O-O",
+      starfish.from_fen(
+        "rnbqkbnr/ppp2ppp/8/3pp3/3P4/2N1B3/PPPQPPPP/R3KBNR w KQkq - 0 5",
+      ),
+    )
+  assert move == move.Castle(from: 4, to: 2)
+  let assert Ok(move) =
+    starfish.parse_move(
+      "O-O",
+      starfish.from_fen(
+        "rnbqk2r/ppppbppp/5n2/4p3/2PPP3/8/PP3PPP/RNBQKBNR b KQkq - 0 4",
+      ),
+    )
+  assert move == move.Castle(from: 60, to: 62)
+  let assert Ok(move) =
+    starfish.parse_move(
+      "0-0-0",
+      starfish.from_fen(
+        "r3kbnr/pppqpppp/2n1b3/3p4/3PP3/8/PPP2PPP/RNBQKBNR b KQkq - 0 5",
+      ),
+    )
+  assert move == move.Castle(from: 60, to: 58)
+  let assert Ok(move) =
+    starfish.parse_move(
+      "c8q",
+      starfish.from_fen(
+        "rnbq1bnr/pppPkpp1/4p2p/8/8/8/PPPP1PPP/RNBQKBNR w KQ - 1 5",
+      ),
+    )
+  assert move == move.Promotion(from: 51, to: 58, piece: board.Queen)
+  let assert Ok(move) =
+    starfish.parse_move(
+      "c1=N",
+      starfish.from_fen(
+        "rnbqkbnr/pppp1ppp/8/8/8/4P2P/PPPpKPP1/RNBQ1BNR b kq - 1 5",
+      ),
+    )
+  assert move == move.Promotion(from: 11, to: 2, piece: board.Knight)
+  let assert Ok(move) =
+    starfish.parse_move(
+      "Bxh1",
+      starfish.from_fen(
+        "rn1qkbnr/pbpppppp/1p6/6P1/8/8/PPPPPP1P/RNBQKBNR b KQkq - 0 3",
+      ),
+    )
+  assert move == move.Capture(from: 49, to: 7)
+  let assert Ok(move) =
+    starfish.parse_move(
+      "Rac4",
+      starfish.from_fen("k7/8/8/8/R4R2/8/8/7K w - - 0 1"),
+    )
+  assert move == move.Move(from: 24, to: 26)
+
+  let assert Ok(move) =
+    starfish.parse_move(
+      "R7c6",
+      starfish.from_fen("k7/2r5/8/8/2r5/8/8/7K b - - 0 1"),
+    )
+  assert move == move.Move(from: 50, to: 42)
+
+  let assert Error(Nil) = starfish.parse_move("e2", starfish.new())
+  let assert Error(Nil) = starfish.parse_move("Bxe4", starfish.new())
+  let assert Error(Nil) = starfish.parse_move("Ndf3", starfish.new())
 }
 
 pub fn state_test() {

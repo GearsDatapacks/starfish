@@ -161,18 +161,17 @@ pub fn to_long_algebraic_notation(move: Move) -> String {
   move.to_long_algebraic_notation(move)
 }
 
-/// Parses a move from long algebraic notation, in the same format as
-/// [`to_long_algebraic_notation`](#to_long_algebraic_notation). Returns an error
-/// if the syntax is invalid or the move is not legal.
-pub fn parse_long_algebraic_notation(
-  string: String,
-  game: Game,
-) -> Result(Move, Nil) {
-  move.from_long_algebraic_notation(string, game)
-}
-
+/// Parses a move from either long algebraic notation, in the same format as
+/// [`to_long_algebraic_notation`](#to_long_algebraic_notation), or from [Standard
+/// Algebraic Notation](https://en.wikipedia.org/wiki/Algebraic_notation_(chess)).
+/// Returns an error if the syntax is invalid or the move is not legal on the
+/// board.
 pub fn parse_move(move: String, game: Game) -> Result(Move, Nil) {
-  todo
+  let legal_moves = legal_moves(game)
+  case move.from_long_algebraic_notation(move, legal_moves) {
+    Ok(move) -> Ok(move)
+    Error(_) -> move.from_standard_algebraic_notation(move, game, legal_moves)
+  }
 }
 
 pub type GameState {
