@@ -190,8 +190,13 @@ pub type DrawReason {
 
 /// Returns the current game state: A win, draw or neither.
 pub fn state(game: Game) -> GameState {
-  // TODO: Check for insufficient material and threefold repetition
+  // TODO: Check for insufficient material
   use <- bool.guard(game.half_moves >= 50, Draw(FiftyMoves))
+  // We count two-fold repetition
+  use <- bool.guard(
+    game.is_threefold_repetition(game),
+    Draw(ThreefoldRepetition),
+  )
   use <- bool.guard(move.any_legal(game), Continue)
   use <- bool.guard(!game.attack_information.in_check, Draw(Stalemate))
   case game.to_move {

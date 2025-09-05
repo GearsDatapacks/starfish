@@ -274,7 +274,14 @@ pub fn parse_standard_algebraic_notation_test() {
   let assert Error(Nil) = starfish.parse_move("Ndf3", starfish.new())
 }
 
+fn apply_move(game: starfish.Game, move: String) -> starfish.Game {
+  let assert Ok(move) = starfish.parse_move(move, game)
+  starfish.apply_move(game, move)
+}
+
 pub fn state_test() {
+  assert starfish.state(starfish.new()) == starfish.Continue
+
   assert "8/8/8/1q6/1K6/3q4/8/8 w - - 0 1"
     |> starfish.from_fen
     |> starfish.state
@@ -294,6 +301,26 @@ pub fn state_test() {
     |> starfish.from_fen
     |> starfish.state
     == starfish.Draw(starfish.FiftyMoves)
+
+  assert starfish.new()
+    |> apply_move("Nf3")
+    |> apply_move("Nc6")
+    |> apply_move("Ng1")
+    |> apply_move("Nb8")
+    |> starfish.state
+    == starfish.Continue
+
+  assert starfish.new()
+    |> apply_move("Nf3")
+    |> apply_move("Nc6")
+    |> apply_move("Ng1")
+    |> apply_move("Nb8")
+    |> apply_move("Nf3")
+    |> apply_move("Nc6")
+    |> apply_move("Ng1")
+    |> apply_move("Nb8")
+    |> starfish.state
+    == starfish.Draw(starfish.ThreefoldRepetition)
 }
 
 fn perft_all(fen: String, expected: List(Int)) {

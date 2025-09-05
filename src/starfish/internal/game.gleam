@@ -2,7 +2,6 @@ import gleam/bool
 import gleam/int
 import gleam/option.{type Option, None, Some}
 import gleam/result
-import gleam/set.{type Set}
 import gleam/string
 import starfish/internal/board.{Black, White}
 import starfish/internal/hash
@@ -28,7 +27,7 @@ pub type Game {
     full_moves: Int,
     // Extra information
     zobrist_hash: Int,
-    previous_positions: Set(Int),
+    previous_positions: List(Int),
     attack_information: attack.AttackInformation,
   )
 }
@@ -49,7 +48,7 @@ pub fn initial_position() -> Game {
     half_moves: 0,
     full_moves: 1,
     zobrist_hash:,
-    previous_positions: set.new(),
+    previous_positions: [],
     attack_information:,
   )
 }
@@ -103,7 +102,7 @@ pub fn from_fen(fen: String) -> Game {
     half_moves:,
     full_moves:,
     zobrist_hash:,
-    previous_positions: set.new(),
+    previous_positions: [],
     attack_information:,
   )
 }
@@ -244,7 +243,7 @@ pub fn try_from_fen(fen: String) -> Result(Game, FenParseError) {
     half_moves:,
     full_moves:,
     zobrist_hash:,
-    previous_positions: set.new(),
+    previous_positions: [],
     attack_information:,
   ))
 }
@@ -328,5 +327,29 @@ fn castling_to_string(castling: Castling) -> String {
   case string {
     "" -> "-"
     _ -> string
+  }
+}
+
+pub fn is_threefold_repetition(game: Game) -> Bool {
+  is_threefold_repetition_loop(
+    game.previous_positions,
+    game.zobrist_hash,
+    False,
+  )
+}
+
+fn is_threefold_repetition_loop(
+  positions: List(Int),
+  position: Int,
+  found: Bool,
+) -> Bool {
+  case positions {
+    [] -> False
+    [first, ..rest] if first == position ->
+      case found {
+        False -> is_threefold_repetition_loop(rest, position, True)
+        True -> True
+      }
+    [_, ..rest] -> is_threefold_repetition_loop(rest, position, found)
   }
 }

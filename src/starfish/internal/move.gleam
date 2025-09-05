@@ -3,7 +3,6 @@ import gleam/dict
 import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/result
-import gleam/set
 import starfish/internal/board
 import starfish/internal/game.{type Game, Game}
 import starfish/internal/hash
@@ -513,7 +512,7 @@ fn apply_castle(game: Game, from: Int, to: Int, long: Bool) -> Game {
   }
 
   let half_moves = half_moves + 1
-  let previous_positions = set.insert(previous_positions, zobrist_hash)
+  let previous_positions = [zobrist_hash, ..previous_positions]
 
   // TODO: Update incrementally
   let zobrist_hash = hash.hash(board, to_move)
@@ -597,8 +596,8 @@ fn do_apply(
   }
 
   let #(half_moves, previous_positions) = case one_way_move {
-    True -> #(0, set.new())
-    False -> #(half_moves + 1, set.insert(previous_positions, zobrist_hash))
+    True -> #(0, [])
+    False -> #(half_moves + 1, [zobrist_hash, ..previous_positions])
   }
 
   // TODO: Update incrementally
