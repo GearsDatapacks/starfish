@@ -192,7 +192,6 @@ pub type DrawReason {
 pub fn state(game: Game) -> GameState {
   // TODO: Check for insufficient material
   use <- bool.guard(game.half_moves >= 50, Draw(FiftyMoves))
-  // We count two-fold repetition
   use <- bool.guard(
     game.is_threefold_repetition(game),
     Draw(ThreefoldRepetition),
