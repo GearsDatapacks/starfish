@@ -306,9 +306,9 @@ fn search_loop(
       use <- bool.guard(
         eval >= best_opponent_move,
         SearchResult(
-          best_opponent_move,
-          cached_positions,
-          hash.Floor,
+          eval:,
+          cached_positions:,
+          eval_kind: hash.Floor,
           finished: True,
         ),
       )
