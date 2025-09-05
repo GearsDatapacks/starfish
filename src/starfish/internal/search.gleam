@@ -211,9 +211,11 @@ fn search(
         }
         moves ->
           case depth {
-            // Once we reach the limit of our depth, we statically evaluate the position.
+            // Once we reach the limit of our depth, we continue searching until
+            // we reach only quiet positions.
             0 -> {
-              let eval = evaluate.evaluate(game, moves)
+              let eval =
+                quiescent_search(game, moves, best_eval, best_opponent_move)
               let cached_positions =
                 hash.cache(
                   cached_positions,
@@ -429,4 +431,52 @@ fn guess_eval(game: Game, move: Move) -> Int {
   }
 
   position_improvement + move_specific_score
+}
+
+/// Search until we find a "quiet" position, to avoid thinking a position is good
+/// while really on the next move a valuable piece could be captured.
+/// https://www.chessprogramming.org/Quiescence_Search
+fn quiescent_search(
+  game: Game,
+  moves: List(#(Move, Int)),
+  best_eval: Int,
+  best_opponent_move: Int,
+) -> Int {
+  let evaluation = evaluate.evaluate(game, moves)
+
+  use <- bool.guard(evaluation >= best_opponent_move, evaluation)
+
+  let best_eval = case evaluation > best_eval {
+    True -> evaluation
+    False -> best_eval
+  }
+
+  quiescent_search_loop(game, moves, best_eval, best_opponent_move)
+}
+
+fn quiescent_search_loop(
+  game: Game,
+  moves: List(#(Move, Int)),
+  best_eval: Int,
+  best_opponent_move: Int,
+) -> Int {
+  case moves {
+    [] -> best_eval
+    // We don't need to search quiet moves
+    [#(move.Move(..), _), ..moves] | [#(move.Castle(..), _), ..moves] ->
+      quiescent_search_loop(game, moves, best_eval, best_opponent_move)
+    [#(move, _), ..moves] -> {
+      let new_game = move.apply(game, move)
+      let new_moves = order_moves(new_game)
+      let evaluation =
+        -quiescent_search(new_game, new_moves, -best_opponent_move, -best_eval)
+
+      use <- bool.guard(evaluation >= best_opponent_move, evaluation)
+      let best_eval = case evaluation > best_eval {
+        True -> evaluation
+        False -> best_eval
+      }
+      quiescent_search_loop(game, moves, best_eval, best_opponent_move)
+    }
+  }
 }

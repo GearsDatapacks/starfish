@@ -10,7 +10,7 @@ A chess library for Gleam!
 - [x] Implement a system to test the performance of the generated moves
 - [x] Maybe have some way to perform a search using iterative deepening?
 - [x] Order moves before searching via heuristics to improve alpha-beta pruning
-- [ ] Continue searching past regular depth when captures are available (https://www.chessprogramming.org/Quiescence_Search)
+- [x] Continue searching past regular depth when captures are available (https://www.chessprogramming.org/Quiescence_Search)
 - [ ] Improve static evaluation using pawn structure
 - [ ] Improve endgame play by encouraging the king to the centre of the board and encouraging pawns to promote
 - [ ] Incrementally update game information such as zobrist hash, material count, and other evaluation information
