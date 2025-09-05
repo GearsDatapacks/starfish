@@ -164,6 +164,12 @@ fn search(
     SearchResult(0, cached_positions, hash.Exact, True),
   )
 
+  // Threefold repetition is also a draw
+  use <- bool.guard(
+    game.is_threefold_repetition(game),
+    SearchResult(0, cached_positions, hash.Exact, True),
+  )
+
   case
     hash.get(
       cached_positions,
