@@ -22,6 +22,22 @@ pub fn hash(board: board.Board, to_move: board.Colour) -> Int {
   })
 }
 
+pub fn toggle_piece(
+  hash: Int,
+  position: Int,
+  piece: board.Piece,
+  colour: board.Colour,
+) -> Int {
+  int.bitwise_exclusive_or(
+    generated.hash_for_piece(piece, colour, position),
+    hash,
+  )
+}
+
+pub fn toggle_to_move(hash: Int) -> Int {
+  int.bitwise_exclusive_or(hash, generated.black_to_move_hash)
+}
+
 pub type Table =
   iv.Array(Entry)
 

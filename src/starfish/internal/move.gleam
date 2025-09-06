@@ -467,17 +467,14 @@ fn apply_castle(game: Game, from: Int, to: Int, long: Bool) -> Game {
     en_passant_square: _,
     half_moves:,
     full_moves:,
-    zobrist_hash:,
+    zobrist_hash: previous_hash,
     previous_positions:,
     attack_information: _,
     white_king_position:,
     black_king_position:,
   ) = game
 
-  let assert board.Occupied(piece:, colour:) = board.get(board, from)
-    as "Tried to apply castle move from invalid position"
-
-  let castling = case colour {
+  let castling = case to_move {
     board.Black ->
       game.Castling(..castling, black_kingside: False, black_queenside: False)
     board.White ->
@@ -490,12 +487,23 @@ fn apply_castle(game: Game, from: Int, to: Int, long: Bool) -> Game {
     False -> #(7, 5)
   }
 
+  let rook_from = rook_rank * 8 + rook_file_from
+  let rook_to = rook_rank * 8 + rook_file_to
+
   let board =
     board
     |> dict.delete(from)
-    |> dict.delete(rook_rank * 8 + rook_file_from)
-    |> dict.insert(to, #(piece, colour))
-    |> dict.insert(rook_rank * 8 + rook_file_to, #(board.Rook, colour))
+    |> dict.delete(rook_from)
+    |> dict.insert(to, #(board.King, to_move))
+    |> dict.insert(rook_to, #(board.Rook, to_move))
+
+  let zobrist_hash =
+    previous_hash
+    |> hash.toggle_to_move
+    |> hash.toggle_piece(from, board.King, to_move)
+    |> hash.toggle_piece(to, board.King, to_move)
+    |> hash.toggle_piece(rook_from, board.Rook, to_move)
+    |> hash.toggle_piece(rook_to, board.Rook, to_move)
 
   let en_passant_square = None
 
@@ -520,10 +528,7 @@ fn apply_castle(game: Game, from: Int, to: Int, long: Bool) -> Game {
   }
 
   let half_moves = half_moves + 1
-  let previous_positions = [zobrist_hash, ..previous_positions]
-
-  // TODO: Update incrementally
-  let zobrist_hash = hash.hash(board, to_move)
+  let previous_positions = [previous_hash, ..previous_positions]
 
   let king_position = case to_move {
     board.Black -> black_king_position
@@ -562,7 +567,7 @@ fn do_apply(
     en_passant_square:,
     half_moves:,
     full_moves:,
-    zobrist_hash:,
+    zobrist_hash: previous_hash,
     previous_positions:,
     attack_information: _,
     white_king_position:,
@@ -579,9 +584,22 @@ fn do_apply(
 
   let one_way_move = capture || piece == board.Pawn
 
+  let zobrist_hash =
+    previous_hash
+    |> hash.toggle_to_move
+    |> hash.toggle_piece(from, piece, colour)
+
   let piece = case promotion {
     None -> piece
     Some(piece) -> piece
+  }
+
+  let zobrist_hash = hash.toggle_piece(zobrist_hash, to, piece, colour)
+
+  let zobrist_hash = case board.get(board, to) {
+    board.Occupied(piece:, colour:) ->
+      hash.toggle_piece(zobrist_hash, to, piece, colour)
+    board.Empty | board.OffBoard -> zobrist_hash
   }
 
   let board =
@@ -589,10 +607,22 @@ fn do_apply(
     |> dict.delete(from)
     |> dict.insert(to, #(piece, colour))
 
-  let board = case en_passant, en_passant_square, colour {
-    True, Some(square), board.White -> dict.delete(board, square - 8)
-    True, Some(square), board.Black -> dict.delete(board, square + 8)
-    _, _, _ -> board
+  let #(board, zobrist_hash) = case en_passant, en_passant_square, colour {
+    True, Some(square), board.White -> {
+      let ep_square = square - 8
+      #(
+        dict.delete(board, ep_square),
+        hash.toggle_piece(zobrist_hash, ep_square, board.Pawn, board.Black),
+      )
+    }
+    True, Some(square), board.Black -> {
+      let ep_square = square + 8
+      #(
+        dict.delete(board, ep_square),
+        hash.toggle_piece(zobrist_hash, ep_square, board.Pawn, board.White),
+      )
+    }
+    _, _, _ -> #(board, zobrist_hash)
   }
 
   let en_passant_square = case piece, to - from {
@@ -613,7 +643,7 @@ fn do_apply(
 
   let #(half_moves, previous_positions) = case one_way_move {
     True -> #(0, [])
-    False -> #(half_moves + 1, [zobrist_hash, ..previous_positions])
+    False -> #(half_moves + 1, [previous_hash, ..previous_positions])
   }
 
   let white_king_position = case from == white_king_position {
@@ -625,9 +655,6 @@ fn do_apply(
     True -> to
     False -> black_king_position
   }
-
-  // TODO: Update incrementally
-  let zobrist_hash = hash.hash(board, to_move)
 
   let king_position = case to_move {
     board.Black -> black_king_position
