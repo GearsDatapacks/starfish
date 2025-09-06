@@ -45,6 +45,10 @@ pub type FenParseError {
   /// `rnbqkbnr/8/8/8/8/RNBQKBNR w - - 0 1`, only 6 ranks are specified, which
   /// would cause this error.
   PiecePositionsIncomplete
+  /// The board is missing the white king, meaning the position is invalid.
+  MissingWhiteKing
+  /// The board is missing the black king, meaning the position is invalid.
+  MissingBlackKing
   /// The field specifying which player's turn is next is wrong or missing. For
   /// example in the string `8/8/8/8/8/8/8/8 - - 0 1`, the active colour specifier
   /// is missing.
@@ -96,6 +100,8 @@ fn convert_fen_parse_error(error: game.FenParseError) -> FenParseError {
     game.ExpectedSpaceAfterSegment -> ExpectedSpaceAfterSegment
     game.PiecePositionsIncomplete -> PiecePositionsIncomplete
     game.TrailingData(value) -> TrailingData(value)
+    game.MissingBlackKing -> MissingBlackKing
+    game.MissingWhiteKing -> MissingWhiteKing
   }
 }
 

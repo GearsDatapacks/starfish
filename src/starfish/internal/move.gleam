@@ -109,7 +109,7 @@ fn pawn_moves(game: Game, position: Int, moves: List(Move)) -> List(Move) {
   // promotions, because they must move to the same rank. A double-move can
   // never be a promotion because a pawn cannot double move from a position that
   // ends on the promotion rank.
-  let is_promotion = board.rank(forward_one) == promotion_rank
+  let is_promotion = forward_one / 8 == promotion_rank
 
   let moves = case board.get(game.board, forward_one) {
     board.Empty -> {
@@ -122,7 +122,7 @@ fn pawn_moves(game: Game, position: Int, moves: List(Move)) -> List(Move) {
         True -> [Move(from: position, to: forward_one), ..moves]
       }
 
-      let can_double_move = case game.to_move, board.rank(position) {
+      let can_double_move = case game.to_move, position / 8 {
         board.Black, 6 | board.White, 1 -> True
         _, _ -> False
       }
@@ -178,8 +178,7 @@ fn pawn_moves(game: Game, position: Int, moves: List(Move)) -> List(Move) {
 }
 
 fn en_passant_is_valid(game: Game, position: Int, new_position: Int) -> Bool {
-  let captured_pawn_position =
-    board.position(file: board.file(new_position), rank: board.rank(position))
+  let captured_pawn_position = new_position % 8 + position / 8 * 8
 
   case game.attack_information.in_check {
     False ->
@@ -452,7 +451,7 @@ fn sliding_moves_in_direction(
 pub fn apply(game: Game, move: Move) -> game.Game {
   case move {
     Capture(from:, to:) -> do_apply(game, from, to, False, None, True)
-    Castle(from:, to:) -> apply_castle(game, from, to, board.file(to) == 2)
+    Castle(from:, to:) -> apply_castle(game, from, to, to % 8 == 2)
     EnPassant(from:, to:) -> do_apply(game, from, to, True, None, True)
     Move(from:, to:) -> do_apply(game, from, to, False, None, False)
     Promotion(from:, to:, piece:) ->
@@ -471,6 +470,8 @@ fn apply_castle(game: Game, from: Int, to: Int, long: Bool) -> Game {
     zobrist_hash:,
     previous_positions:,
     attack_information: _,
+    white_king_position:,
+    black_king_position:,
   ) = game
 
   let assert board.Occupied(piece:, colour:) = board.get(board, from)
@@ -483,7 +484,7 @@ fn apply_castle(game: Game, from: Int, to: Int, long: Bool) -> Game {
       game.Castling(..castling, white_kingside: False, white_queenside: False)
   }
 
-  let rook_rank = board.rank(from)
+  let rook_rank = from / 8
   let #(rook_file_from, rook_file_to) = case long {
     True -> #(0, 3)
     False -> #(7, 5)
@@ -492,14 +493,21 @@ fn apply_castle(game: Game, from: Int, to: Int, long: Bool) -> Game {
   let board =
     board
     |> dict.delete(from)
-    |> dict.delete(board.position(file: rook_file_from, rank: rook_rank))
+    |> dict.delete(rook_rank * 8 + rook_file_from)
     |> dict.insert(to, #(piece, colour))
-    |> dict.insert(board.position(file: rook_file_to, rank: rook_rank), #(
-      board.Rook,
-      colour,
-    ))
+    |> dict.insert(rook_rank * 8 + rook_file_to, #(board.Rook, colour))
 
   let en_passant_square = None
+
+  let white_king_position = case to_move {
+    board.White -> to
+    board.Black -> white_king_position
+  }
+
+  let black_king_position = case to_move {
+    board.Black -> to
+    board.White -> black_king_position
+  }
 
   let full_moves = case to_move {
     board.Black -> full_moves + 1
@@ -517,8 +525,12 @@ fn apply_castle(game: Game, from: Int, to: Int, long: Bool) -> Game {
   // TODO: Update incrementally
   let zobrist_hash = hash.hash(board, to_move)
 
+  let king_position = case to_move {
+    board.Black -> black_king_position
+    board.White -> white_king_position
+  }
   // TODO: Maybe we can update this incrementally too?
-  let attack_information = attack.calculate(board, to_move)
+  let attack_information = attack.calculate(board, king_position, to_move)
 
   Game(
     board:,
@@ -530,6 +542,8 @@ fn apply_castle(game: Game, from: Int, to: Int, long: Bool) -> Game {
     zobrist_hash:,
     previous_positions:,
     attack_information:,
+    white_king_position:,
+    black_king_position:,
   )
 }
 
@@ -551,6 +565,8 @@ fn do_apply(
     zobrist_hash:,
     previous_positions:,
     attack_information: _,
+    white_king_position:,
+    black_king_position:,
   ) = game
 
   let assert board.Occupied(piece:, colour:) = board.get(board, from)
@@ -600,11 +616,25 @@ fn do_apply(
     False -> #(half_moves + 1, [zobrist_hash, ..previous_positions])
   }
 
+  let white_king_position = case from == white_king_position {
+    True -> to
+    False -> white_king_position
+  }
+
+  let black_king_position = case from == black_king_position {
+    True -> to
+    False -> black_king_position
+  }
+
   // TODO: Update incrementally
   let zobrist_hash = hash.hash(board, to_move)
 
+  let king_position = case to_move {
+    board.Black -> black_king_position
+    board.White -> white_king_position
+  }
   // TODO: Maybe we can update this incrementally too?
-  let attack_information = attack.calculate(board, to_move)
+  let attack_information = attack.calculate(board, king_position, to_move)
 
   Game(
     board:,
@@ -616,6 +646,8 @@ fn do_apply(
     zobrist_hash:,
     previous_positions:,
     attack_information:,
+    white_king_position:,
+    black_king_position:,
   )
 }
 
@@ -806,7 +838,7 @@ pub fn from_standard_algebraic_notation(
 
       use <- bool.guard(move != "", Error(Nil))
 
-      let to = board.position(file: to_file, rank: to_rank)
+      let to = to_rank * 8 + to_file
 
       case get_pieces(game, piece_kind, legal_moves, from_file, from_rank, to) {
         [from] if capture -> Ok(Capture(from:, to:))
@@ -896,7 +928,7 @@ fn parse_pawn_move(
     _ -> Error(Nil)
   })
 
-  let to = board.position(file: to_file, rank:)
+  let to = rank * 8 + to_file
 
   case
     get_pieces(game, board.Pawn, legal_moves, from_file, None, to),
@@ -926,11 +958,11 @@ fn get_pieces(
     && piece == find_piece
     && case from_file {
       None -> True
-      Some(file) -> file == board.file(position)
+      Some(file) -> file == position % 8
     }
     && case from_rank {
       None -> True
-      Some(rank) -> rank == board.rank(position)
+      Some(rank) -> rank == position / 8
     }
     && list.any(legal_moves, fn(move) { move.to == to && move.from == position })
 

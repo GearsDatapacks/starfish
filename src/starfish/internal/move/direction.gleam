@@ -9,8 +9,8 @@ pub type Direction {
 /// Returns a position moved in a given direction, checking for it being within
 /// the bounds of the board.
 pub fn in_direction(position: Int, direction: Direction) -> Int {
-  let file = board.file(position) + direction.file_change
-  let rank = board.rank(position) + direction.rank_change
+  let file = position % 8 + direction.file_change
+  let rank = position / 8 + direction.rank_change
 
   case
     file >= board.side_length
@@ -19,7 +19,7 @@ pub fn in_direction(position: Int, direction: Direction) -> Int {
     || rank < 0
   {
     True -> -1
-    False -> board.position(file:, rank:)
+    False -> rank * 8 + file
   }
 }
 

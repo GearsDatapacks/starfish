@@ -1,6 +1,7 @@
 import gleam/bool
 import gleam/dict
 import gleam/int
+import gleam/option
 import gleam/result
 
 pub const side_length = 8
@@ -110,10 +111,20 @@ pub fn parse_position(fen: String) -> Result(#(Int, String), Nil) {
   Ok(#(position(file:, rank:), fen))
 }
 
-pub fn from_fen(fen: String) -> #(Board, String, Bool) {
+pub type FenParseResult {
+  FenParseResult(
+    board: Board,
+    remaining: String,
+    board_is_complete: Bool,
+    white_king_position: option.Option(Int),
+    black_king_position: option.Option(Int),
+  )
+}
+
+pub fn from_fen(fen: String) -> FenParseResult {
   // FEN starts from black's size, which means that `rank` needs to start at the
   // end of the board.
-  from_fen_loop(fen, 0, side_length - 1, dict.new())
+  from_fen_loop(fen, 0, side_length - 1, dict.new(), option.None, option.None)
 }
 
 fn from_fen_loop(
@@ -121,29 +132,121 @@ fn from_fen_loop(
   file: Int,
   rank: Int,
   board: Board,
-) -> #(Board, String, Bool) {
+  white_king_position: option.Option(Int),
+  black_king_position: option.Option(Int),
+) -> FenParseResult {
   let position = position(file:, rank:)
 
   case fen {
     // When we hit a `/`, we start from file 0 again, and move down the rank,
     // since we are starting from black and ending on white.
-    "/" <> fen -> from_fen_loop(fen, 0, rank - 1, board)
-    "0" <> fen -> from_fen_loop(fen, file, rank, board)
-    "1" <> fen -> from_fen_loop(fen, file + 1, rank, board)
-    "2" <> fen -> from_fen_loop(fen, file + 2, rank, board)
-    "3" <> fen -> from_fen_loop(fen, file + 3, rank, board)
-    "4" <> fen -> from_fen_loop(fen, file + 4, rank, board)
-    "5" <> fen -> from_fen_loop(fen, file + 5, rank, board)
-    "6" <> fen -> from_fen_loop(fen, file + 6, rank, board)
-    "7" <> fen -> from_fen_loop(fen, file + 7, rank, board)
-    "8" <> fen -> from_fen_loop(fen, file + 8, rank, board)
-    "9" <> fen -> from_fen_loop(fen, file + 9, rank, board)
+    "/" <> fen ->
+      from_fen_loop(
+        fen,
+        0,
+        rank - 1,
+        board,
+        white_king_position,
+        black_king_position,
+      )
+    "0" <> fen ->
+      from_fen_loop(
+        fen,
+        file,
+        rank,
+        board,
+        white_king_position,
+        black_king_position,
+      )
+    "1" <> fen ->
+      from_fen_loop(
+        fen,
+        file + 1,
+        rank,
+        board,
+        white_king_position,
+        black_king_position,
+      )
+    "2" <> fen ->
+      from_fen_loop(
+        fen,
+        file + 2,
+        rank,
+        board,
+        white_king_position,
+        black_king_position,
+      )
+    "3" <> fen ->
+      from_fen_loop(
+        fen,
+        file + 3,
+        rank,
+        board,
+        white_king_position,
+        black_king_position,
+      )
+    "4" <> fen ->
+      from_fen_loop(
+        fen,
+        file + 4,
+        rank,
+        board,
+        white_king_position,
+        black_king_position,
+      )
+    "5" <> fen ->
+      from_fen_loop(
+        fen,
+        file + 5,
+        rank,
+        board,
+        white_king_position,
+        black_king_position,
+      )
+    "6" <> fen ->
+      from_fen_loop(
+        fen,
+        file + 6,
+        rank,
+        board,
+        white_king_position,
+        black_king_position,
+      )
+    "7" <> fen ->
+      from_fen_loop(
+        fen,
+        file + 7,
+        rank,
+        board,
+        white_king_position,
+        black_king_position,
+      )
+    "8" <> fen ->
+      from_fen_loop(
+        fen,
+        file + 8,
+        rank,
+        board,
+        white_king_position,
+        black_king_position,
+      )
+    "9" <> fen ->
+      from_fen_loop(
+        fen,
+        file + 9,
+        rank,
+        board,
+        white_king_position,
+        black_king_position,
+      )
     "K" <> fen ->
       from_fen_loop(
         fen,
         file + 1,
         rank,
         dict.insert(board, position, #(King, White)),
+        option.Some(position),
+        black_king_position,
       )
     "Q" <> fen ->
       from_fen_loop(
@@ -151,6 +254,8 @@ fn from_fen_loop(
         file + 1,
         rank,
         dict.insert(board, position, #(Queen, White)),
+        white_king_position,
+        black_king_position,
       )
     "B" <> fen ->
       from_fen_loop(
@@ -158,6 +263,8 @@ fn from_fen_loop(
         file + 1,
         rank,
         dict.insert(board, position, #(Bishop, White)),
+        white_king_position,
+        black_king_position,
       )
     "N" <> fen ->
       from_fen_loop(
@@ -165,6 +272,8 @@ fn from_fen_loop(
         file + 1,
         rank,
         dict.insert(board, position, #(Knight, White)),
+        white_king_position,
+        black_king_position,
       )
     "R" <> fen ->
       from_fen_loop(
@@ -172,6 +281,8 @@ fn from_fen_loop(
         file + 1,
         rank,
         dict.insert(board, position, #(Rook, White)),
+        white_king_position,
+        black_king_position,
       )
     "P" <> fen ->
       from_fen_loop(
@@ -179,6 +290,8 @@ fn from_fen_loop(
         file + 1,
         rank,
         dict.insert(board, position, #(Pawn, White)),
+        white_king_position,
+        black_king_position,
       )
     "k" <> fen ->
       from_fen_loop(
@@ -186,6 +299,8 @@ fn from_fen_loop(
         file + 1,
         rank,
         dict.insert(board, position, #(King, Black)),
+        white_king_position,
+        option.Some(position),
       )
     "q" <> fen ->
       from_fen_loop(
@@ -193,6 +308,8 @@ fn from_fen_loop(
         file + 1,
         rank,
         dict.insert(board, position, #(Queen, Black)),
+        white_king_position,
+        black_king_position,
       )
     "b" <> fen ->
       from_fen_loop(
@@ -200,6 +317,8 @@ fn from_fen_loop(
         file + 1,
         rank,
         dict.insert(board, position, #(Bishop, Black)),
+        white_king_position,
+        black_king_position,
       )
     "n" <> fen ->
       from_fen_loop(
@@ -207,6 +326,8 @@ fn from_fen_loop(
         file + 1,
         rank,
         dict.insert(board, position, #(Knight, Black)),
+        white_king_position,
+        black_king_position,
       )
     "r" <> fen ->
       from_fen_loop(
@@ -214,6 +335,8 @@ fn from_fen_loop(
         file + 1,
         rank,
         dict.insert(board, position, #(Rook, Black)),
+        white_king_position,
+        black_king_position,
       )
     "p" <> fen ->
       from_fen_loop(
@@ -221,10 +344,19 @@ fn from_fen_loop(
         file + 1,
         rank,
         dict.insert(board, position, #(Pawn, Black)),
+        white_king_position,
+        black_king_position,
       )
     // Since we iterate the rank in reverse order, but we iterate the file in
     // ascending order, the final position should equal to `side_length`
-    _ -> #(board, fen, position == side_length)
+    _ ->
+      FenParseResult(
+        board:,
+        remaining: fen,
+        board_is_complete: position == side_length,
+        white_king_position:,
+        black_king_position:,
+      )
   }
 }
 

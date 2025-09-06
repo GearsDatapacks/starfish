@@ -29,6 +29,8 @@ pub type Game {
     zobrist_hash: Int,
     previous_positions: List(Int),
     attack_information: attack.AttackInformation,
+    white_king_position: Int,
+    black_king_position: Int,
   )
 }
 
@@ -38,8 +40,11 @@ pub fn initial_position() -> Game {
   let to_move = White
   let board = board.initial_position()
   let zobrist_hash = hash.hash(board, to_move)
-  let attack_information = attack.calculate(board, to_move)
 
+  let white_king_position = 4
+  let black_king_position = 60
+
+  let attack_information = attack.calculate(board, white_king_position, to_move)
   Game(
     board:,
     to_move:,
@@ -50,13 +55,21 @@ pub fn initial_position() -> Game {
     zobrist_hash:,
     previous_positions: [],
     attack_information:,
+    white_king_position:,
+    black_king_position:,
   )
 }
 
 pub fn from_fen(fen: String) -> Game {
   let fen = strip_spaces(fen)
 
-  let #(board, fen, _) = board.from_fen(fen)
+  let board.FenParseResult(
+    board:,
+    remaining: fen,
+    board_is_complete: _,
+    white_king_position:,
+    black_king_position:,
+  ) = board.from_fen(fen)
   let fen = strip_spaces(fen)
 
   let #(to_move, fen) = case fen {
@@ -92,7 +105,15 @@ pub fn from_fen(fen: String) -> Game {
   }
 
   let zobrist_hash = hash.hash(board, to_move)
-  let attack_information = attack.calculate(board, to_move)
+
+  let white_king_position = option.unwrap(white_king_position, 0)
+  let black_king_position = option.unwrap(black_king_position, 0)
+
+  let king_position = case to_move {
+    Black -> black_king_position
+    White -> white_king_position
+  }
+  let attack_information = attack.calculate(board, king_position, to_move)
 
   Game(
     board:,
@@ -104,6 +125,8 @@ pub fn from_fen(fen: String) -> Game {
     zobrist_hash:,
     previous_positions: [],
     attack_information:,
+    white_king_position:,
+    black_king_position:,
   )
 }
 
@@ -183,6 +206,8 @@ fn strip_spaces(fen: String) -> String {
 
 pub type FenParseError {
   PiecePositionsIncomplete
+  MissingWhiteKing
+  MissingBlackKing
   ExpectedActiveColour
   ExpectedSpaceAfterSegment
   TrailingData(String)
@@ -195,8 +220,23 @@ pub type FenParseError {
 pub fn try_from_fen(fen: String) -> Result(Game, FenParseError) {
   let fen = strip_spaces(fen)
 
-  let #(board, fen, completed) = board.from_fen(fen)
-  use <- bool.guard(!completed, Error(PiecePositionsIncomplete))
+  let board.FenParseResult(
+    board:,
+    remaining: fen,
+    board_is_complete:,
+    white_king_position:,
+    black_king_position:,
+  ) = board.from_fen(fen)
+  use <- bool.guard(!board_is_complete, Error(PiecePositionsIncomplete))
+  use white_king_position <- result.try(option.to_result(
+    white_king_position,
+    MissingWhiteKing,
+  ))
+  use black_king_position <- result.try(option.to_result(
+    black_king_position,
+    MissingBlackKing,
+  ))
+
   use fen <- result.try(expect_spaces(fen))
 
   use #(to_move, fen) <- result.try(case fen {
@@ -233,7 +273,13 @@ pub fn try_from_fen(fen: String) -> Result(Game, FenParseError) {
   use <- bool.guard(fen != "", Error(TrailingData(fen)))
 
   let zobrist_hash = hash.hash(board, to_move)
-  let attack_information = attack.calculate(board, to_move)
+
+  let king_position = case to_move {
+    Black -> black_king_position
+    White -> white_king_position
+  }
+
+  let attack_information = attack.calculate(board, king_position, to_move)
 
   Ok(Game(
     board:,
@@ -245,6 +291,8 @@ pub fn try_from_fen(fen: String) -> Result(Game, FenParseError) {
     zobrist_hash:,
     previous_positions: [],
     attack_information:,
+    white_king_position:,
+    black_king_position:,
   ))
 }
 

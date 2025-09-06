@@ -27,14 +27,11 @@ pub type AttackInformation {
   )
 }
 
-pub fn calculate(board: Board, to_move: board.Colour) -> AttackInformation {
-  // TODO: keep track of this
-  let assert Ok(#(king_position, _)) =
-    board
-    |> dict.to_list
-    |> list.find(fn(pair) { pair.1 == #(board.King, to_move) })
-    as "Failed to find king on board"
-
+pub fn calculate(
+  board: Board,
+  king_position: Int,
+  to_move: board.Colour,
+) -> AttackInformation {
   let attacking = case to_move {
     board.Black -> board.White
     board.White -> board.Black
