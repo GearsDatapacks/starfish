@@ -5,6 +5,7 @@ import gleeunit
 import pocket_watch
 import starfish
 import starfish/internal/board
+import starfish/internal/evaluate
 import starfish/internal/game
 import starfish/internal/move
 
@@ -272,6 +273,11 @@ pub fn parse_standard_algebraic_notation_test() {
   let assert Error(Nil) = starfish.parse_move("e2", starfish.new())
   let assert Error(Nil) = starfish.parse_move("Bxe4", starfish.new())
   let assert Error(Nil) = starfish.parse_move("Ndf3", starfish.new())
+}
+
+pub fn phase_test() {
+  assert evaluate.phase(starfish.new()) == 0
+  assert evaluate.phase(starfish.from_fen("k7/8/8/8/8/8/8/K7")) == 128
 }
 
 fn apply_move(game: starfish.Game, move: String) -> starfish.Game {

@@ -34,14 +34,26 @@ pub type Piece {
   King
 }
 
+pub const pawn_value = 100
+
+pub const knight_value = 300
+
+pub const bishop_value = 300
+
+pub const rook_value = 500
+
+pub const queen_value = 900
+
+pub const king_value = 1000
+
 pub fn piece_value(piece: Piece) -> Int {
   case piece {
-    Pawn -> 100
-    Knight -> 300
-    Bishop -> 300
-    Rook -> 500
-    Queen -> 900
-    King -> 1000
+    Pawn -> pawn_value
+    Knight -> knight_value
+    Bishop -> bishop_value
+    Rook -> rook_value
+    Queen -> queen_value
+    King -> king_value
   }
 }
 
@@ -118,13 +130,28 @@ pub type FenParseResult {
     board_is_complete: Bool,
     white_king_position: option.Option(Int),
     black_king_position: option.Option(Int),
+    white_pawn_material: Int,
+    black_pawn_material: Int,
+    white_non_pawn_material: Int,
+    black_non_pawn_material: Int,
   )
 }
 
 pub fn from_fen(fen: String) -> FenParseResult {
   // FEN starts from black's size, which means that `rank` needs to start at the
   // end of the board.
-  from_fen_loop(fen, 0, side_length - 1, dict.new(), option.None, option.None)
+  from_fen_loop(
+    fen,
+    0,
+    side_length - 1,
+    dict.new(),
+    option.None,
+    option.None,
+    0,
+    0,
+    0,
+    0,
+  )
 }
 
 fn from_fen_loop(
@@ -134,6 +161,10 @@ fn from_fen_loop(
   board: Board,
   white_king_position: option.Option(Int),
   black_king_position: option.Option(Int),
+  white_pawn_material: Int,
+  black_pawn_material: Int,
+  white_non_pawn_material: Int,
+  black_non_pawn_material: Int,
 ) -> FenParseResult {
   let position = position(file:, rank:)
 
@@ -148,6 +179,10 @@ fn from_fen_loop(
         board,
         white_king_position,
         black_king_position,
+        white_pawn_material,
+        black_pawn_material,
+        white_non_pawn_material,
+        black_non_pawn_material,
       )
     "0" <> fen ->
       from_fen_loop(
@@ -157,6 +192,10 @@ fn from_fen_loop(
         board,
         white_king_position,
         black_king_position,
+        white_pawn_material,
+        black_pawn_material,
+        white_non_pawn_material,
+        black_non_pawn_material,
       )
     "1" <> fen ->
       from_fen_loop(
@@ -166,6 +205,10 @@ fn from_fen_loop(
         board,
         white_king_position,
         black_king_position,
+        white_pawn_material,
+        black_pawn_material,
+        white_non_pawn_material,
+        black_non_pawn_material,
       )
     "2" <> fen ->
       from_fen_loop(
@@ -175,6 +218,10 @@ fn from_fen_loop(
         board,
         white_king_position,
         black_king_position,
+        white_pawn_material,
+        black_pawn_material,
+        white_non_pawn_material,
+        black_non_pawn_material,
       )
     "3" <> fen ->
       from_fen_loop(
@@ -184,6 +231,10 @@ fn from_fen_loop(
         board,
         white_king_position,
         black_king_position,
+        white_pawn_material,
+        black_pawn_material,
+        white_non_pawn_material,
+        black_non_pawn_material,
       )
     "4" <> fen ->
       from_fen_loop(
@@ -193,6 +244,10 @@ fn from_fen_loop(
         board,
         white_king_position,
         black_king_position,
+        white_pawn_material,
+        black_pawn_material,
+        white_non_pawn_material,
+        black_non_pawn_material,
       )
     "5" <> fen ->
       from_fen_loop(
@@ -202,6 +257,10 @@ fn from_fen_loop(
         board,
         white_king_position,
         black_king_position,
+        white_pawn_material,
+        black_pawn_material,
+        white_non_pawn_material,
+        black_non_pawn_material,
       )
     "6" <> fen ->
       from_fen_loop(
@@ -211,6 +270,10 @@ fn from_fen_loop(
         board,
         white_king_position,
         black_king_position,
+        white_pawn_material,
+        black_pawn_material,
+        white_non_pawn_material,
+        black_non_pawn_material,
       )
     "7" <> fen ->
       from_fen_loop(
@@ -220,6 +283,10 @@ fn from_fen_loop(
         board,
         white_king_position,
         black_king_position,
+        white_pawn_material,
+        black_pawn_material,
+        white_non_pawn_material,
+        black_non_pawn_material,
       )
     "8" <> fen ->
       from_fen_loop(
@@ -229,6 +296,10 @@ fn from_fen_loop(
         board,
         white_king_position,
         black_king_position,
+        white_pawn_material,
+        black_pawn_material,
+        white_non_pawn_material,
+        black_non_pawn_material,
       )
     "9" <> fen ->
       from_fen_loop(
@@ -238,6 +309,10 @@ fn from_fen_loop(
         board,
         white_king_position,
         black_king_position,
+        white_pawn_material,
+        black_pawn_material,
+        white_non_pawn_material,
+        black_non_pawn_material,
       )
     "K" <> fen ->
       from_fen_loop(
@@ -247,6 +322,10 @@ fn from_fen_loop(
         dict.insert(board, position, #(King, White)),
         option.Some(position),
         black_king_position,
+        white_pawn_material,
+        black_pawn_material,
+        white_non_pawn_material,
+        black_non_pawn_material,
       )
     "Q" <> fen ->
       from_fen_loop(
@@ -256,6 +335,10 @@ fn from_fen_loop(
         dict.insert(board, position, #(Queen, White)),
         white_king_position,
         black_king_position,
+        white_pawn_material,
+        black_pawn_material,
+        white_non_pawn_material + queen_value,
+        black_non_pawn_material,
       )
     "B" <> fen ->
       from_fen_loop(
@@ -265,6 +348,10 @@ fn from_fen_loop(
         dict.insert(board, position, #(Bishop, White)),
         white_king_position,
         black_king_position,
+        white_pawn_material,
+        black_pawn_material,
+        white_non_pawn_material + bishop_value,
+        black_non_pawn_material,
       )
     "N" <> fen ->
       from_fen_loop(
@@ -274,6 +361,10 @@ fn from_fen_loop(
         dict.insert(board, position, #(Knight, White)),
         white_king_position,
         black_king_position,
+        white_pawn_material,
+        black_pawn_material,
+        white_non_pawn_material + knight_value,
+        black_non_pawn_material,
       )
     "R" <> fen ->
       from_fen_loop(
@@ -283,6 +374,10 @@ fn from_fen_loop(
         dict.insert(board, position, #(Rook, White)),
         white_king_position,
         black_king_position,
+        white_pawn_material,
+        black_pawn_material,
+        white_non_pawn_material + rook_value,
+        black_non_pawn_material,
       )
     "P" <> fen ->
       from_fen_loop(
@@ -292,6 +387,10 @@ fn from_fen_loop(
         dict.insert(board, position, #(Pawn, White)),
         white_king_position,
         black_king_position,
+        white_pawn_material + pawn_value,
+        black_pawn_material,
+        white_non_pawn_material,
+        black_non_pawn_material,
       )
     "k" <> fen ->
       from_fen_loop(
@@ -301,6 +400,10 @@ fn from_fen_loop(
         dict.insert(board, position, #(King, Black)),
         white_king_position,
         option.Some(position),
+        white_pawn_material,
+        black_pawn_material,
+        white_non_pawn_material,
+        black_non_pawn_material,
       )
     "q" <> fen ->
       from_fen_loop(
@@ -310,6 +413,10 @@ fn from_fen_loop(
         dict.insert(board, position, #(Queen, Black)),
         white_king_position,
         black_king_position,
+        white_pawn_material,
+        black_pawn_material,
+        white_non_pawn_material,
+        black_non_pawn_material + queen_value,
       )
     "b" <> fen ->
       from_fen_loop(
@@ -319,6 +426,10 @@ fn from_fen_loop(
         dict.insert(board, position, #(Bishop, Black)),
         white_king_position,
         black_king_position,
+        white_pawn_material,
+        black_pawn_material,
+        white_non_pawn_material,
+        black_non_pawn_material + bishop_value,
       )
     "n" <> fen ->
       from_fen_loop(
@@ -328,6 +439,10 @@ fn from_fen_loop(
         dict.insert(board, position, #(Knight, Black)),
         white_king_position,
         black_king_position,
+        white_pawn_material,
+        black_pawn_material,
+        white_non_pawn_material,
+        black_non_pawn_material + knight_value,
       )
     "r" <> fen ->
       from_fen_loop(
@@ -337,6 +452,10 @@ fn from_fen_loop(
         dict.insert(board, position, #(Rook, Black)),
         white_king_position,
         black_king_position,
+        white_pawn_material,
+        black_pawn_material,
+        white_non_pawn_material,
+        black_non_pawn_material + rook_value,
       )
     "p" <> fen ->
       from_fen_loop(
@@ -346,6 +465,10 @@ fn from_fen_loop(
         dict.insert(board, position, #(Pawn, Black)),
         white_king_position,
         black_king_position,
+        white_pawn_material,
+        black_pawn_material + pawn_value,
+        white_non_pawn_material,
+        black_non_pawn_material,
       )
     // Since we iterate the rank in reverse order, but we iterate the file in
     // ascending order, the final position should equal to `side_length`
@@ -356,6 +479,10 @@ fn from_fen_loop(
         board_is_complete: position == side_length,
         white_king_position:,
         black_king_position:,
+        white_pawn_material:,
+        black_pawn_material:,
+        white_non_pawn_material:,
+        black_non_pawn_material:,
       )
   }
 }

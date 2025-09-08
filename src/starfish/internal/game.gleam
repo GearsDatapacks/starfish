@@ -29,9 +29,13 @@ pub type Game {
     zobrist_hash: Int,
     previous_positions: List(Int),
     attack_information: attack.AttackInformation,
-    white_king_position: Int,
-    black_king_position: Int,
+    black_pieces: PieceInfo,
+    white_pieces: PieceInfo,
   )
+}
+
+pub type PieceInfo {
+  PieceInfo(king_position: Int, non_pawn_material: Int, pawn_material: Int)
 }
 
 const all_castling = Castling(True, True, True, True)
@@ -44,7 +48,19 @@ pub fn initial_position() -> Game {
   let white_king_position = 4
   let black_king_position = 60
 
+  let non_pawn_material =
+    board.queen_value
+    + board.rook_value
+    * 2
+    + board.bishop_value
+    * 2
+    + board.knight_value
+    * 2
+
+  let pawn_material = board.pawn_value * 8
+
   let attack_information = attack.calculate(board, white_king_position, to_move)
+
   Game(
     board:,
     to_move:,
@@ -55,8 +71,16 @@ pub fn initial_position() -> Game {
     zobrist_hash:,
     previous_positions: [],
     attack_information:,
-    white_king_position:,
-    black_king_position:,
+    white_pieces: PieceInfo(
+      king_position: white_king_position,
+      non_pawn_material:,
+      pawn_material:,
+    ),
+    black_pieces: PieceInfo(
+      king_position: black_king_position,
+      non_pawn_material:,
+      pawn_material:,
+    ),
   )
 }
 
@@ -69,6 +93,10 @@ pub fn from_fen(fen: String) -> Game {
     board_is_complete: _,
     white_king_position:,
     black_king_position:,
+    white_pawn_material:,
+    black_pawn_material:,
+    white_non_pawn_material:,
+    black_non_pawn_material:,
   ) = board.from_fen(fen)
   let fen = strip_spaces(fen)
 
@@ -125,8 +153,16 @@ pub fn from_fen(fen: String) -> Game {
     zobrist_hash:,
     previous_positions: [],
     attack_information:,
-    white_king_position:,
-    black_king_position:,
+    white_pieces: PieceInfo(
+      king_position: white_king_position,
+      non_pawn_material: white_non_pawn_material,
+      pawn_material: white_pawn_material,
+    ),
+    black_pieces: PieceInfo(
+      king_position: black_king_position,
+      non_pawn_material: black_non_pawn_material,
+      pawn_material: black_pawn_material,
+    ),
   )
 }
 
@@ -226,6 +262,10 @@ pub fn try_from_fen(fen: String) -> Result(Game, FenParseError) {
     board_is_complete:,
     white_king_position:,
     black_king_position:,
+    white_pawn_material:,
+    black_pawn_material:,
+    white_non_pawn_material:,
+    black_non_pawn_material:,
   ) = board.from_fen(fen)
   use <- bool.guard(!board_is_complete, Error(PiecePositionsIncomplete))
   use white_king_position <- result.try(option.to_result(
@@ -291,8 +331,16 @@ pub fn try_from_fen(fen: String) -> Result(Game, FenParseError) {
     zobrist_hash:,
     previous_positions: [],
     attack_information:,
-    white_king_position:,
-    black_king_position:,
+    white_pieces: PieceInfo(
+      king_position: white_king_position,
+      non_pawn_material: white_non_pawn_material,
+      pawn_material: white_pawn_material,
+    ),
+    black_pieces: PieceInfo(
+      king_position: black_king_position,
+      non_pawn_material: black_non_pawn_material,
+      pawn_material: black_pawn_material,
+    ),
   ))
 }
 

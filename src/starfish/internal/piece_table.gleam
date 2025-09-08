@@ -77,7 +77,7 @@ const king = #(
   #(20, 30, 10, 0, 0, 10, 30, 20),
 )
 
-/// In the beginning and middle of the game, the king must be kept safe, however
+/// In the beginning and middle of the game, the king must be kept safe. However
 /// as the game progresses towards the end, the king should become more aggressive
 /// so we use a different set of scores for kings in the endgame.
 const king_endgame = #(
@@ -89,6 +89,22 @@ const king_endgame = #(
   #(-30, -10, 20, 30, 30, 20, -10, -30),
   #(-30, -30, 0, 0, 0, 0, -30, -30),
   #(-50, -30, -30, -30, -30, -30, -30, -50),
+)
+
+/// In the middlegame, pawns are encouraged to protect the king's castling
+/// squares. In the endgame though, they no longer need to protect the king and
+/// instead should promote. Therefore, we use a different table to encourage this.
+const pawn_endgame = #(
+  #(100, 100, 100, 100, 100, 100, 100, 100),
+  #(80, 80, 80, 80, 80, 80, 80, 80),
+  #(50, 50, 50, 50, 50, 50, 50, 50),
+  #(30, 30, 30, 30, 30, 30, 30, 30),
+  #(10, 10, 10, 10, 10, 10, 10, 10),
+  // Since pawns can double-move, the first two ranks are equivalent from the
+  // pawn's perspective.
+  #(-10, -10, -10, -10, -10, -10, -10, -10),
+  #(-10, -10, -10, -10, -10, -10, -10, -10),
+  #(-10, -10, -10, -10, -10, -10, -10, -10),
 )
 
 type Table =
@@ -140,6 +156,7 @@ pub fn piece_score(
   piece: board.Piece,
   colour: board.Colour,
   position: Int,
+  phase: Int,
 ) -> Int {
   let table = case piece {
     board.Pawn -> pawn
@@ -150,6 +167,17 @@ pub fn piece_score(
     board.King -> king
   }
 
-  // TODO: take into account endgame for kings
-  get(table, position, colour)
+  let middlegame_value = get(table, position, colour)
+
+  case piece {
+    board.King if phase > 0 ->
+      interpolate(middlegame_value, get(king_endgame, position, colour), phase)
+    board.Pawn if phase > 0 ->
+      interpolate(middlegame_value, get(pawn_endgame, position, colour), phase)
+    _ -> middlegame_value
+  }
+}
+
+fn interpolate(middlegame_value: Int, endgame_value: Int, phase: Int) -> Int {
+  { middlegame_value * { 128 - phase } + endgame_value * phase } / 128
 }

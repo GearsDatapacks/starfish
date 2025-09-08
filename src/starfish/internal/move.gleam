@@ -470,8 +470,16 @@ fn apply_castle(game: Game, from: Int, to: Int, long: Bool) -> Game {
     zobrist_hash: previous_hash,
     previous_positions:,
     attack_information: _,
-    white_king_position:,
-    black_king_position:,
+    white_pieces: game.PieceInfo(
+      king_position: white_king_position,
+      non_pawn_material: white_non_pawn_material,
+      pawn_material: white_pawn_material,
+    ),
+    black_pieces: game.PieceInfo(
+      king_position: black_king_position,
+      non_pawn_material: black_non_pawn_material,
+      pawn_material: black_pawn_material,
+    ),
   ) = game
 
   let castling = case to_move {
@@ -547,8 +555,16 @@ fn apply_castle(game: Game, from: Int, to: Int, long: Bool) -> Game {
     zobrist_hash:,
     previous_positions:,
     attack_information:,
-    white_king_position:,
-    black_king_position:,
+    white_pieces: game.PieceInfo(
+      king_position: white_king_position,
+      non_pawn_material: white_non_pawn_material,
+      pawn_material: white_pawn_material,
+    ),
+    black_pieces: game.PieceInfo(
+      king_position: black_king_position,
+      non_pawn_material: black_non_pawn_material,
+      pawn_material: black_pawn_material,
+    ),
   )
 }
 
@@ -570,9 +586,25 @@ fn do_apply(
     zobrist_hash: previous_hash,
     previous_positions:,
     attack_information: _,
-    white_king_position:,
-    black_king_position:,
+    white_pieces:,
+    black_pieces:,
   ) = game
+
+  let #(
+    game.PieceInfo(
+      king_position: our_king_position,
+      non_pawn_material: our_non_pawn_material,
+      pawn_material: our_pawn_material,
+    ),
+    game.PieceInfo(
+      king_position: opposing_king_position,
+      non_pawn_material: opposing_non_pawn_material,
+      pawn_material: opposing_pawn_material,
+    ),
+  ) = case to_move {
+    board.Black -> #(black_pieces, white_pieces)
+    board.White -> #(white_pieces, black_pieces)
+  }
 
   let assert board.Occupied(piece:, colour:) = board.get(board, from)
     as "Tried to apply move from invalid position"
@@ -589,17 +621,35 @@ fn do_apply(
     |> hash.toggle_to_move
     |> hash.toggle_piece(from, piece, colour)
 
-  let piece = case promotion {
-    None -> piece
-    Some(piece) -> piece
+  let #(piece, our_pawn_material, our_non_pawn_material) = case promotion {
+    None -> #(piece, our_pawn_material, our_non_pawn_material)
+    Some(piece) -> #(
+      piece,
+      our_pawn_material - board.pawn_value,
+      our_non_pawn_material + board.piece_value(piece),
+    )
   }
 
   let zobrist_hash = hash.toggle_piece(zobrist_hash, to, piece, colour)
 
-  let zobrist_hash = case board.get(board, to) {
-    board.Occupied(piece:, colour:) ->
-      hash.toggle_piece(zobrist_hash, to, piece, colour)
-    board.Empty | board.OffBoard -> zobrist_hash
+  let #(zobrist_hash, opposing_pawn_material, opposing_non_pawn_material) = case
+    board.get(board, to)
+  {
+    board.Occupied(piece: board.Pawn, colour:) -> #(
+      hash.toggle_piece(zobrist_hash, to, board.Pawn, colour),
+      opposing_pawn_material - board.pawn_value,
+      opposing_non_pawn_material,
+    )
+    board.Occupied(piece:, colour:) -> #(
+      hash.toggle_piece(zobrist_hash, to, piece, colour),
+      opposing_pawn_material,
+      opposing_non_pawn_material - board.piece_value(piece),
+    )
+    board.Empty | board.OffBoard -> #(
+      zobrist_hash,
+      opposing_pawn_material,
+      opposing_non_pawn_material,
+    )
   }
 
   let board =
@@ -636,6 +686,30 @@ fn do_apply(
     board.White -> full_moves
   }
 
+  let our_king_position = case from == our_king_position {
+    True -> to
+    False -> our_king_position
+  }
+
+  let our_pieces =
+    game.PieceInfo(
+      king_position: our_king_position,
+      non_pawn_material: our_non_pawn_material,
+      pawn_material: our_pawn_material,
+    )
+
+  let opposing_pieces =
+    game.PieceInfo(
+      king_position: opposing_king_position,
+      non_pawn_material: opposing_non_pawn_material,
+      pawn_material: opposing_pawn_material,
+    )
+
+  let #(white_pieces, black_pieces) = case to_move {
+    board.White -> #(our_pieces, opposing_pieces)
+    board.Black -> #(opposing_pieces, our_pieces)
+  }
+
   let to_move = case to_move {
     board.Black -> board.White
     board.White -> board.Black
@@ -646,22 +720,9 @@ fn do_apply(
     False -> #(half_moves + 1, [previous_hash, ..previous_positions])
   }
 
-  let white_king_position = case from == white_king_position {
-    True -> to
-    False -> white_king_position
-  }
-
-  let black_king_position = case from == black_king_position {
-    True -> to
-    False -> black_king_position
-  }
-
-  let king_position = case to_move {
-    board.Black -> black_king_position
-    board.White -> white_king_position
-  }
   // TODO: Maybe we can update this incrementally too?
-  let attack_information = attack.calculate(board, king_position, to_move)
+  let attack_information =
+    attack.calculate(board, opposing_king_position, to_move)
 
   Game(
     board:,
@@ -673,8 +734,8 @@ fn do_apply(
     zobrist_hash:,
     previous_positions:,
     attack_information:,
-    white_king_position:,
-    black_king_position:,
+    white_pieces:,
+    black_pieces:,
   )
 }
 

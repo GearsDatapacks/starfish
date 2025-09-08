@@ -345,9 +345,10 @@ fn search_loop(
 /// in order to save iterating the list a second time. The guesses are discarded
 /// after this point.
 fn order_moves(game: Game) -> List(#(Move, Int)) {
+  let phase = evaluate.phase(game)
   game
   |> move.legal
-  |> collect_guessed_eval(game, [])
+  |> collect_guessed_eval(game, phase, [])
   |> list.sort(fn(a, b) { int.compare(a.1, b.1) })
 }
 
@@ -367,12 +368,16 @@ fn reorder_moves(
 fn collect_guessed_eval(
   moves: List(Move),
   game: Game,
+  phase: Int,
   acc: List(#(Move, Int)),
 ) -> List(#(Move, Int)) {
   case moves {
     [] -> acc
     [move, ..moves] ->
-      collect_guessed_eval(moves, game, [#(move, guess_eval(game, move)), ..acc])
+      collect_guessed_eval(moves, game, phase, [
+        #(move, guess_eval(game, move, phase)),
+        ..acc
+      ])
   }
 }
 
@@ -382,7 +387,7 @@ const capture_promotion_bonus = 10_000
 /// Guess the evaluation of a move so we can hopefully search moves in a better
 /// order than random. Searching better moves first improves alpha-beta pruning,
 /// allowing us to search more positions.
-fn guess_eval(game: Game, move: Move) -> Int {
+fn guess_eval(game: Game, move: Move, phase: Int) -> Int {
   let assert board.Occupied(piece:, colour:) = board.get(game.board, move.from)
     as "Invalid move trying to move empty piece"
 
@@ -392,10 +397,10 @@ fn guess_eval(game: Game, move: Move) -> Int {
       piece
   }
 
-  let from_score = piece_table.piece_score(moving_piece, colour, move.from)
-  let to_score = piece_table.piece_score(moving_piece, colour, move.to)
-
+  let from_score = piece_table.piece_score(piece, colour, move.from, phase)
+  let to_score = piece_table.piece_score(moving_piece, colour, move.to, phase)
   let position_improvement = to_score - from_score
+
   let move_specific_score = case move {
     // TODO store information in moves so we don't have to retrieve it from the
     // board every time.
