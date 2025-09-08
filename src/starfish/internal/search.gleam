@@ -345,7 +345,11 @@ fn search_loop(
 /// in order to save iterating the list a second time. The guesses are discarded
 /// after this point.
 fn order_moves(game: Game) -> List(#(Move, Int)) {
-  let phase = evaluate.phase(game)
+  let phase =
+    game.phase(
+      game.white_pieces.non_pawn_material,
+      game.black_pieces.non_pawn_material,
+    )
   game
   |> move.legal
   |> collect_guessed_eval(game, phase, [])

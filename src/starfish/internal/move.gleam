@@ -8,6 +8,7 @@ import starfish/internal/game.{type Game, Game}
 import starfish/internal/hash
 import starfish/internal/move/attack
 import starfish/internal/move/direction.{type Direction}
+import starfish/internal/piece_table
 
 pub type Move {
   Castle(from: Int, to: Int)
@@ -474,11 +475,13 @@ fn apply_castle(game: Game, from: Int, to: Int, long: Bool) -> Game {
       king_position: white_king_position,
       non_pawn_material: white_non_pawn_material,
       pawn_material: white_pawn_material,
+      piece_square_score: white_piece_square_score,
     ),
     black_pieces: game.PieceInfo(
       king_position: black_king_position,
       non_pawn_material: black_non_pawn_material,
       pawn_material: black_pawn_material,
+      piece_square_score: black_piece_square_score,
     ),
   ) = game
 
@@ -512,6 +515,27 @@ fn apply_castle(game: Game, from: Int, to: Int, long: Bool) -> Game {
     |> hash.toggle_piece(to, board.King, to_move)
     |> hash.toggle_piece(rook_from, board.Rook, to_move)
     |> hash.toggle_piece(rook_to, board.Rook, to_move)
+
+  let phase = game.phase(white_non_pawn_material, black_non_pawn_material)
+
+  let #(white_piece_square_score, black_piece_square_score) = case to_move {
+    board.Black -> #(
+      white_piece_square_score,
+      black_piece_square_score
+        - piece_table.piece_score(board.King, to_move, from, phase)
+        - piece_table.piece_score(board.Rook, to_move, rook_from, phase)
+        + piece_table.piece_score(board.King, to_move, to, phase)
+        + piece_table.piece_score(board.Rook, to_move, rook_to, phase),
+    )
+    board.White -> #(
+      white_piece_square_score
+        - piece_table.piece_score(board.King, to_move, from, phase)
+        - piece_table.piece_score(board.Rook, to_move, rook_from, phase)
+        + piece_table.piece_score(board.King, to_move, to, phase)
+        + piece_table.piece_score(board.Rook, to_move, rook_to, phase),
+      black_piece_square_score,
+    )
+  }
 
   let en_passant_square = None
 
@@ -559,11 +583,13 @@ fn apply_castle(game: Game, from: Int, to: Int, long: Bool) -> Game {
       king_position: white_king_position,
       non_pawn_material: white_non_pawn_material,
       pawn_material: white_pawn_material,
+      piece_square_score: white_piece_square_score,
     ),
     black_pieces: game.PieceInfo(
       king_position: black_king_position,
       non_pawn_material: black_non_pawn_material,
       pawn_material: black_pawn_material,
+      piece_square_score: black_piece_square_score,
     ),
   )
 }
@@ -595,11 +621,13 @@ fn do_apply(
       king_position: our_king_position,
       non_pawn_material: our_non_pawn_material,
       pawn_material: our_pawn_material,
+      piece_square_score: our_piece_square_score,
     ),
     game.PieceInfo(
       king_position: opposing_king_position,
       non_pawn_material: opposing_non_pawn_material,
       pawn_material: opposing_pawn_material,
+      piece_square_score: opposing_piece_square_score,
     ),
   ) = case to_move {
     board.Black -> #(black_pieces, white_pieces)
@@ -621,6 +649,12 @@ fn do_apply(
     |> hash.toggle_to_move
     |> hash.toggle_piece(from, piece, colour)
 
+  let phase =
+    game.phase(white_pieces.non_pawn_material, black_pieces.non_pawn_material)
+
+  let our_piece_square_score =
+    our_piece_square_score - piece_table.piece_score(piece, colour, from, phase)
+
   let #(piece, our_pawn_material, our_non_pawn_material) = case promotion {
     None -> #(piece, our_pawn_material, our_non_pawn_material)
     Some(piece) -> #(
@@ -630,25 +664,36 @@ fn do_apply(
     )
   }
 
+  let our_piece_square_score =
+    our_piece_square_score + piece_table.piece_score(piece, colour, to, phase)
+
   let zobrist_hash = hash.toggle_piece(zobrist_hash, to, piece, colour)
 
-  let #(zobrist_hash, opposing_pawn_material, opposing_non_pawn_material) = case
-    board.get(board, to)
-  {
+  let #(
+    zobrist_hash,
+    opposing_pawn_material,
+    opposing_non_pawn_material,
+    opposing_piece_square_score,
+  ) = case board.get(board, to) {
     board.Occupied(piece: board.Pawn, colour:) -> #(
       hash.toggle_piece(zobrist_hash, to, board.Pawn, colour),
       opposing_pawn_material - board.pawn_value,
       opposing_non_pawn_material,
+      opposing_piece_square_score
+        - piece_table.piece_score(board.Pawn, colour, to, phase),
     )
     board.Occupied(piece:, colour:) -> #(
       hash.toggle_piece(zobrist_hash, to, piece, colour),
       opposing_pawn_material,
       opposing_non_pawn_material - board.piece_value(piece),
+      opposing_piece_square_score
+        - piece_table.piece_score(piece, colour, to, phase),
     )
     board.Empty | board.OffBoard -> #(
       zobrist_hash,
       opposing_pawn_material,
       opposing_non_pawn_material,
+      opposing_piece_square_score,
     )
   }
 
@@ -696,6 +741,7 @@ fn do_apply(
       king_position: our_king_position,
       non_pawn_material: our_non_pawn_material,
       pawn_material: our_pawn_material,
+      piece_square_score: our_piece_square_score,
     )
 
   let opposing_pieces =
@@ -703,6 +749,7 @@ fn do_apply(
       king_position: opposing_king_position,
       non_pawn_material: opposing_non_pawn_material,
       pawn_material: opposing_pawn_material,
+      piece_square_score: opposing_piece_square_score,
     )
 
   let #(white_pieces, black_pieces) = case to_move {

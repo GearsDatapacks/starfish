@@ -1,4 +1,5 @@
 import gleam/bool
+import gleam/dict
 import gleam/int
 import gleam/option.{type Option, None, Some}
 import gleam/result
@@ -6,6 +7,7 @@ import gleam/string
 import starfish/internal/board.{Black, White}
 import starfish/internal/hash
 import starfish/internal/move/attack
+import starfish/internal/piece_table
 
 pub type Castling {
   Castling(
@@ -35,7 +37,12 @@ pub type Game {
 }
 
 pub type PieceInfo {
-  PieceInfo(king_position: Int, non_pawn_material: Int, pawn_material: Int)
+  PieceInfo(
+    king_position: Int,
+    non_pawn_material: Int,
+    pawn_material: Int,
+    piece_square_score: Int,
+  )
 }
 
 const all_castling = Castling(True, True, True, True)
@@ -61,6 +68,10 @@ pub fn initial_position() -> Game {
 
   let attack_information = attack.calculate(board, white_king_position, to_move)
 
+  let phase = phase(non_pawn_material, non_pawn_material)
+  let #(white_piece_scores, black_piece_scores) =
+    piece_square_scores(board, phase)
+
   Game(
     board:,
     to_move:,
@@ -75,13 +86,27 @@ pub fn initial_position() -> Game {
       king_position: white_king_position,
       non_pawn_material:,
       pawn_material:,
+      piece_square_score: white_piece_scores,
     ),
     black_pieces: PieceInfo(
       king_position: black_king_position,
       non_pawn_material:,
       pawn_material:,
+      piece_square_score: black_piece_scores,
     ),
   )
+}
+
+fn piece_square_scores(board: board.Board, phase: Int) -> #(Int, Int) {
+  use #(white_score, black_score), position, #(piece, colour) <- dict.fold(
+    board,
+    #(0, 0),
+  )
+  let score = piece_table.piece_score(piece, colour, position, phase)
+  case colour {
+    Black -> #(white_score, black_score + score)
+    White -> #(white_score + score, black_score)
+  }
 }
 
 pub fn from_fen(fen: String) -> Game {
@@ -143,6 +168,10 @@ pub fn from_fen(fen: String) -> Game {
   }
   let attack_information = attack.calculate(board, king_position, to_move)
 
+  let phase = phase(white_non_pawn_material, black_non_pawn_material)
+  let #(white_piece_scores, black_piece_scores) =
+    piece_square_scores(board, phase)
+
   Game(
     board:,
     to_move:,
@@ -157,11 +186,13 @@ pub fn from_fen(fen: String) -> Game {
       king_position: white_king_position,
       non_pawn_material: white_non_pawn_material,
       pawn_material: white_pawn_material,
+      piece_square_score: white_piece_scores,
     ),
     black_pieces: PieceInfo(
       king_position: black_king_position,
       non_pawn_material: black_non_pawn_material,
       pawn_material: black_pawn_material,
+      piece_square_score: black_piece_scores,
     ),
   )
 }
@@ -321,6 +352,10 @@ pub fn try_from_fen(fen: String) -> Result(Game, FenParseError) {
 
   let attack_information = attack.calculate(board, king_position, to_move)
 
+  let phase = phase(white_non_pawn_material, black_non_pawn_material)
+  let #(white_piece_scores, black_piece_scores) =
+    piece_square_scores(board, phase)
+
   Ok(Game(
     board:,
     to_move:,
@@ -335,11 +370,13 @@ pub fn try_from_fen(fen: String) -> Result(Game, FenParseError) {
       king_position: white_king_position,
       non_pawn_material: white_non_pawn_material,
       pawn_material: white_pawn_material,
+      piece_square_score: white_piece_scores,
     ),
     black_pieces: PieceInfo(
       king_position: black_king_position,
       non_pawn_material: black_non_pawn_material,
       pawn_material: black_pawn_material,
+      piece_square_score: black_piece_scores,
     ),
   ))
 }
@@ -448,4 +485,30 @@ fn is_threefold_repetition_loop(
       }
     [_, ..rest] -> is_threefold_repetition_loop(rest, position, found)
   }
+}
+
+const phase_multiplier = 128
+
+/// About queen + rook, so one major piece per side
+const endgame_material = 1400
+
+/// Below this material limit, the endgame weight is zero. this is about enough
+/// for three minor pieces to be captured.
+const middlegame_material = 3000
+
+pub fn phase(white_material: Int, black_material: Int) -> Int {
+  let non_pawn_material = white_material + black_material
+
+  let clamped_material = case non_pawn_material > middlegame_material {
+    True -> middlegame_material
+    False ->
+      case non_pawn_material < endgame_material {
+        True -> endgame_material
+        False -> non_pawn_material
+      }
+  }
+
+  { middlegame_material - clamped_material }
+  * phase_multiplier
+  / { middlegame_material - endgame_material }
 }
