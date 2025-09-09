@@ -12,8 +12,8 @@ A chess library for Gleam!
 - [x] Order moves before searching via heuristics to improve alpha-beta pruning
 - [x] Continue searching past regular depth when captures are available (https://www.chessprogramming.org/Quiescence_Search)
 - [x] Incrementally update game information such as zobrist hash, material count, and other evaluation information
+- [x] Improve endgame play by encouraging the king to the centre of the board and encouraging pawns to promote
 - [ ] Improve static evaluation using pawn structure
-- [ ] Improve endgame play by encouraging the king to the centre of the board and encouraging pawns to promote
 - [ ] Use an opening database to improve opening play
 - [ ] Cache transposition table across searches
 - [ ] Search deeper for certain "more interesting" moves: https://www.chessprogramming.org/Extensions

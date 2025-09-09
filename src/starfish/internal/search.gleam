@@ -104,6 +104,7 @@ fn search_top_level(
           -infinity,
           -best_eval,
           0,
+          0,
           until,
         )
 
@@ -143,6 +144,8 @@ fn search_top_level(
   }
 }
 
+const max_extensions = 16
+
 fn search(
   game: Game,
   cached_positions: hash.Table,
@@ -150,6 +153,7 @@ fn search(
   best_eval: Int,
   best_opponent_move: Int,
   depth_searched: Int,
+  extensions: Int,
   until: Until,
 ) -> SearchResult {
   use <- bool.guard(
@@ -243,6 +247,7 @@ fn search(
                   best_opponent_move,
                   depth_searched,
                   hash.Ceiling,
+                  extensions,
                   until,
                 )
 
@@ -278,6 +283,7 @@ fn search_loop(
   best_opponent_move: Int,
   depth_searched: Int,
   eval_kind: hash.CacheKind,
+  extensions: Int,
   until: Until,
 ) -> SearchResult {
   case moves {
@@ -289,6 +295,13 @@ fn search_loop(
         finished: True,
       )
     [#(move, _), ..moves] -> {
+      let new_game = move.apply(game, move)
+
+      let extension = case new_game.attack_information.in_check {
+        True if extensions < max_extensions -> 1
+        True | False -> 0
+      }
+
       // Evaluate the position for the opponent. The negative of the opponent's
       // eval is our eval.
       let SearchResult(
@@ -298,12 +311,13 @@ fn search_loop(
         finished:,
       ) as result =
         search(
-          move.apply(game, move),
+          new_game,
           cached_positions,
-          depth - 1,
+          depth - 1 + extension,
           -best_opponent_move,
           -best_eval,
           depth_searched + 1,
+          extensions + extension,
           until,
         )
 
@@ -335,6 +349,7 @@ fn search_loop(
         best_opponent_move,
         depth_searched,
         eval_kind,
+        extensions,
         until,
       )
     }
