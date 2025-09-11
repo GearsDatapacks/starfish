@@ -463,6 +463,18 @@ fn castling_to_string(castling: Castling) -> String {
   }
 }
 
+pub fn is_insufficient_material(game: Game) -> Bool {
+  {
+    game.black_pieces.pawn_material == 0 && game.white_pieces.pawn_material == 0
+  }
+  && {
+    game.black_pieces.non_pawn_material == board.bishop_value
+    || game.black_pieces.non_pawn_material == board.knight_value
+    || game.white_pieces.non_pawn_material == board.bishop_value
+    || game.white_pieces.non_pawn_material == board.knight_value
+  }
+}
+
 pub fn is_threefold_repetition(game: Game) -> Bool {
   is_threefold_repetition_loop(
     game.previous_positions,

@@ -336,6 +336,14 @@ pub fn state_test() {
     |> apply_move("Nb8")
     |> starfish.state
     == starfish.Draw(starfish.ThreefoldRepetition)
+
+  assert starfish.from_fen("8/3k4/4n3/8/4N1P1/5K2/8/8 w - - 0 1")
+    |> starfish.state
+    == starfish.Continue
+
+  assert starfish.from_fen("8/3k4/4n3/8/4N3/5K2/8/8 w - - 0 1")
+    |> starfish.state
+    == starfish.Draw(starfish.InsufficientMaterial)
 }
 
 fn perft_all(fen: String, expected: List(Int)) {

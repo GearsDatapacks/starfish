@@ -161,16 +161,12 @@ fn search(
     SearchResult(0, cached_positions, hash.Exact, False),
   )
 
-  // If we have reached fifty moves, the game is already a draw, so there's no
+  // Check for draw conditions. If it's a draw, the game is over so there's no
   // point searching further.
   use <- bool.guard(
-    game.half_moves >= 50,
-    SearchResult(0, cached_positions, hash.Exact, True),
-  )
-
-  // Threefold repetition is also a draw
-  use <- bool.guard(
-    game.is_threefold_repetition(game),
+    game.half_moves >= 50
+      || game.is_threefold_repetition(game)
+      || game.is_insufficient_material(game),
     SearchResult(0, cached_positions, hash.Exact, True),
   )
 
