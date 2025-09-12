@@ -101,7 +101,7 @@ fn correct_mate_score(eval: Int, depth_searched: Int) -> Int {
         False -> eval
       }
     False ->
-      case eval + max_depth >= -checkmate {
+      case eval + max_depth >= checkmate {
         True -> eval - depth_searched
         False -> eval
       }
