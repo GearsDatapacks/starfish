@@ -155,8 +155,8 @@ pub fn apply_move(game: Game, move: Move) -> Game {
   move.apply(game, move)
 }
 
-pub fn to_standard_algebraic_notation(move: Move) -> String {
-  todo
+pub fn to_standard_algebraic_notation(move: Move, game: Game) -> String {
+  move.to_standard_algebraic_notation(move, game)
 }
 
 /// Convert a move to [long algebraic notation](

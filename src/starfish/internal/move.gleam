@@ -1,5 +1,6 @@
 import gleam/bool
 import gleam/dict
+import gleam/int
 import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/result
@@ -819,6 +820,141 @@ pub fn to_long_algebraic_notation(move: Move) -> String {
   }
 
   from <> to <> extra
+}
+
+pub fn to_standard_algebraic_notation(move: Move, game: Game) -> String {
+  let assert board.Occupied(piece:, colour: _) =
+    board.get(game.board, move.from)
+    as "Legal moves should only move valid pieces"
+
+  case move {
+    Castle(from: _, to:) -> {
+      let is_long = to % 8 == 2
+      case is_long {
+        False -> "O-O"
+        True -> "O-O-O"
+      }
+    }
+    Capture(from:, to:) if piece == board.Pawn ->
+      pawn_move_to_san(from, to, True, None)
+    EnPassant(from:, to:) -> pawn_move_to_san(from, to, True, None)
+    Promotion(from:, to:, piece:) -> {
+      let is_capture = case board.get(game.board, move.to) {
+        board.Occupied(..) -> True
+        board.Empty | board.OffBoard -> False
+      }
+      pawn_move_to_san(from, to, is_capture, Some(piece))
+    }
+    Move(from:, to:) -> move_to_san(game, piece, from, to, False)
+    Capture(from:, to:) -> move_to_san(game, piece, from, to, True)
+  }
+}
+
+fn move_to_san(
+  game: Game,
+  piece: board.Piece,
+  from: Int,
+  to: Int,
+  is_capture: Bool,
+) -> String {
+  let piece_string = piece_to_san(piece)
+
+  let disambiguating_text = case disambiguation(game, from, to, piece) {
+    NoAmbiguity -> ""
+    DisambiguateBoth -> board.position_to_string(from)
+    DisambiguateFile -> file_to_string(from % 8)
+    DisambiguateRank -> int.to_string(from / 8 + 1)
+  }
+
+  case is_capture {
+    False -> piece_string <> disambiguating_text <> board.position_to_string(to)
+    True ->
+      piece_string <> disambiguating_text <> "x" <> board.position_to_string(to)
+  }
+}
+
+fn disambiguation(
+  game: Game,
+  from: Int,
+  to: Int,
+  piece: board.Piece,
+) -> Disambiguation {
+  let from_file = from % 8
+
+  use disambiguation, move <- list.fold(legal(game), NoAmbiguity)
+
+  use <- bool.guard(move.to != to, disambiguation)
+  use <- bool.guard(move.from == from, disambiguation)
+
+  let assert board.Occupied(piece: moving_piece, colour: _) =
+    board.get(game.board, move.from)
+    as "Legal moves should only move valid pieces"
+
+  use <- bool.guard(moving_piece != piece, disambiguation)
+
+  case disambiguation, move.from % 8 == from_file {
+    DisambiguateBoth, _ | DisambiguateRank, True -> disambiguation
+    DisambiguateFile, True -> DisambiguateBoth
+    NoAmbiguity, True -> DisambiguateRank
+    _, False ->
+      case disambiguation {
+        DisambiguateRank -> DisambiguateBoth
+        NoAmbiguity -> DisambiguateFile
+        _ -> disambiguation
+      }
+  }
+}
+
+type Disambiguation {
+  NoAmbiguity
+  DisambiguateFile
+  DisambiguateRank
+  DisambiguateBoth
+}
+
+fn pawn_move_to_san(
+  from: Int,
+  to: Int,
+  is_capture: Bool,
+  promotion: Option(board.Piece),
+) -> String {
+  let destination = board.position_to_string(to)
+  let move = case is_capture {
+    False -> destination
+    True -> {
+      let file = file_to_string(from % 8)
+      file <> "x" <> destination
+    }
+  }
+
+  case promotion {
+    None -> move
+    Some(piece) -> move <> "=" <> piece_to_san(piece)
+  }
+}
+
+fn piece_to_san(piece: board.Piece) -> String {
+  case piece {
+    board.Bishop -> "B"
+    board.King -> "K"
+    board.Knight -> "N"
+    board.Pawn -> ""
+    board.Queen -> "Q"
+    board.Rook -> "R"
+  }
+}
+
+fn file_to_string(file: Int) -> String {
+  case file {
+    0 -> "a"
+    1 -> "b"
+    2 -> "c"
+    3 -> "d"
+    4 -> "e"
+    5 -> "f"
+    6 -> "g"
+    _ -> "h"
+  }
 }
 
 // TODO: can we do this without calculating every legal move? We can probably just

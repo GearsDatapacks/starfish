@@ -274,6 +274,120 @@ pub fn parse_standard_algebraic_notation_test() {
   let assert Error(Nil) = starfish.parse_move("Ndf3", starfish.new())
 }
 
+pub fn to_standard_algebraic_notation_test() {
+  assert starfish.to_standard_algebraic_notation(
+      move.Move(from: 8, to: 24),
+      starfish.new(),
+    )
+    == "a4"
+  assert starfish.to_standard_algebraic_notation(
+      move.Move(from: 6, to: 21),
+      starfish.new(),
+    )
+    == "Nf3"
+  assert starfish.to_standard_algebraic_notation(
+      move.Move(from: 57, to: 42),
+      starfish.from_fen(
+        "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
+      ),
+    )
+    == "Nc6"
+
+  assert starfish.to_standard_algebraic_notation(
+      move.Move(from: 49, to: 33),
+      starfish.from_fen(
+        "rnbqkbnr/pppppppp/8/8/P7/8/1PPPPPPP/RNBQKBNR b KQkq - 0 1",
+      ),
+    )
+    == "b5"
+
+  assert starfish.to_standard_algebraic_notation(
+      move.EnPassant(from: 32, to: 41),
+      starfish.from_fen(
+        "rnbqkbnr/p1p1pppp/8/Pp1p4/8/8/1PPPPPPP/RNBQKBNR w KQkq b6 0 3",
+      ),
+    )
+    == "axb6"
+
+  assert starfish.to_standard_algebraic_notation(
+      move.Castle(from: 4, to: 6),
+      starfish.from_fen(
+        "rnbqkbnr/pp3ppp/8/2ppp3/4P3/5N2/PPPPBPPP/RNBQK2R w KQkq - 0 4",
+      ),
+    )
+    == "O-O"
+
+  assert starfish.to_standard_algebraic_notation(
+      move.Castle(from: 4, to: 2),
+      starfish.from_fen(
+        "rnbqkbnr/ppp2ppp/8/3pp3/3P4/2N1B3/PPPQPPPP/R3KBNR w KQkq - 0 5",
+      ),
+    )
+    == "O-O-O"
+
+  assert starfish.to_standard_algebraic_notation(
+      move.Castle(from: 60, to: 62),
+      starfish.from_fen(
+        "rnbqk2r/ppppbppp/5n2/4p3/2PPP3/8/PP3PPP/RNBQKBNR b KQkq - 0 4",
+      ),
+    )
+    == "O-O"
+
+  assert starfish.to_standard_algebraic_notation(
+      move.Castle(from: 60, to: 58),
+      starfish.from_fen(
+        "r3kbnr/pppqpppp/2n1b3/3p4/3PP3/8/PPP2PPP/RNBQKBNR b KQkq - 0 5",
+      ),
+    )
+    == "O-O-O"
+
+  assert starfish.to_standard_algebraic_notation(
+      move.Promotion(from: 51, to: 58, piece: board.Queen),
+      starfish.from_fen(
+        "rnbq1bnr/pppPkpp1/4p2p/8/8/8/PPPP1PPP/RNBQKBNR w KQ - 1 5",
+      ),
+    )
+    == "dxc8=Q"
+
+  assert starfish.to_standard_algebraic_notation(
+      move.Promotion(from: 11, to: 2, piece: board.Knight),
+      starfish.from_fen(
+        "rnbqkbnr/pppp1ppp/8/8/8/4P2P/PPPpKPP1/RNBQ1BNR b kq - 1 5",
+      ),
+    )
+    == "dxc1=N"
+
+  assert starfish.to_standard_algebraic_notation(
+      move.Capture(from: 49, to: 7),
+      starfish.from_fen(
+        "rn1qkbnr/pbpppppp/1p6/6P1/8/8/PPPPPP1P/RNBQKBNR b KQkq - 0 3",
+      ),
+    )
+    == "Bxh1"
+
+  assert starfish.to_standard_algebraic_notation(
+      move.Move(from: 24, to: 26),
+      starfish.from_fen("k7/8/8/8/R4R2/8/8/7K w - - 0 1"),
+    )
+    == "Rac4"
+
+  assert starfish.to_standard_algebraic_notation(
+      move.Move(from: 50, to: 42),
+      starfish.from_fen("k7/2r5/8/8/2r5/8/8/7K b - - 0 1"),
+    )
+    == "R7c6"
+
+  assert starfish.to_standard_algebraic_notation(
+      move.Capture(from: 31, to: 13),
+      starfish.from_fen("k7/8/8/8/5Q1Q/8/5b1Q/3K4 w - - 0 1"),
+    )
+    == "Qh4xf2"
+
+  let assert Error(Nil) = starfish.parse_move("e2", starfish.new())
+  let assert Error(Nil) = starfish.parse_move("Bxe4", starfish.new())
+  let assert Error(Nil) = starfish.parse_move("Ndf3", starfish.new())
+}
+
 pub fn phase_test() {
   let game = starfish.new()
   assert game.phase(
