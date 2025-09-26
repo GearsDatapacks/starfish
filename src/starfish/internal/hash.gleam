@@ -80,39 +80,20 @@ pub fn cache(
   table: Table,
   hash: Int,
   depth: Int,
-  depth_searched: Int,
   kind: CacheKind,
   eval: Int,
 ) -> Table {
   let key = hash % table_size
-
-  let eval = correct_mate_score(eval, -depth_searched)
 
   let position = Entry(depth:, kind:, eval:, hash:)
 
   iv.try_set(table, key, position)
 }
 
-fn correct_mate_score(eval: Int, depth_searched: Int) -> Int {
-  case eval < 0 {
-    True ->
-      case eval - max_depth <= -checkmate {
-        True -> eval + depth_searched
-        False -> eval
-      }
-    False ->
-      case eval + max_depth >= checkmate {
-        True -> eval - depth_searched
-        False -> eval
-      }
-  }
-}
-
 pub fn get(
   table: Table,
   hash: Int,
   depth: Int,
-  depth_searched: Int,
   best_eval: Int,
   best_opponent_move: Int,
 ) -> Result(#(Int, CacheKind), Nil) {
@@ -120,7 +101,12 @@ pub fn get(
   let entry = iv.get_or_default(table, key, missing_entry)
   use <- bool.guard(entry.hash != hash || entry.depth < depth, Error(Nil))
 
-  let eval = correct_mate_score(entry.eval, depth_searched)
+  let eval = entry.eval
+
+  use <- bool.guard(
+    eval == checkmate || eval == -checkmate,
+    Ok(#(eval, entry.kind)),
+  )
 
   case entry.kind {
     Exact -> Ok(#(eval, Exact))
@@ -131,5 +117,3 @@ pub fn get(
 }
 
 const checkmate = 1_000_000
-
-const max_depth = 1000

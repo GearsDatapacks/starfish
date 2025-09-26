@@ -13,7 +13,7 @@ import starfish/internal/piece_table
 /// references to it will reach it.
 const infinity = 1_000_000_000
 
-const checkmate = -1_000_000
+const checkmate = 1_000_000
 
 type Until =
   fn(Int) -> Bool
@@ -48,20 +48,32 @@ fn iterative_deepening(
 
   case move_result {
     Error(_) -> option.to_result(best_move, Nil)
-    Ok(TopLevelSearchResult(best_move:, cached_positions:)) ->
-      iterative_deepening(
-        game,
-        depth + 1,
-        Some(best_move),
-        reorder_moves(legal_moves, best_move),
-        cached_positions,
-        until,
-      )
+    Ok(TopLevelSearchResult(best_move:, best_eval:, cached_positions:)) ->
+      // If we found checkmate, there's no need to continue searching. Deeper
+      // searches cannot find a sooner mate. Similarly if the best move we have
+      // found is forced checkmate, that means we can't get out of checkmate so
+      // searching further is also pointless.
+      case best_eval == checkmate || best_eval == -checkmate {
+        True -> Ok(best_move)
+        False ->
+          iterative_deepening(
+            game,
+            depth + 1,
+            Some(best_move),
+            reorder_moves(legal_moves, best_move),
+            cached_positions,
+            until,
+          )
+      }
   }
 }
 
 type TopLevelSearchResult {
-  TopLevelSearchResult(best_move: Move, cached_positions: hash.Table)
+  TopLevelSearchResult(
+    best_move: Move,
+    best_eval: Int,
+    cached_positions: hash.Table,
+  )
 }
 
 type SearchResult {
@@ -93,7 +105,7 @@ fn search_top_level(
       case best_move {
         None -> Error(Nil)
         Some(best_move) ->
-          Ok(TopLevelSearchResult(best_move:, cached_positions:))
+          Ok(TopLevelSearchResult(best_move:, best_eval:, cached_positions:))
       }
     [#(move, _), ..moves] -> {
       let SearchResult(eval:, cached_positions:, eval_kind: _, finished:) =
@@ -103,7 +115,6 @@ fn search_top_level(
           depth - 1,
           -infinity,
           -best_eval,
-          0,
           0,
           until,
         )
@@ -122,7 +133,7 @@ fn search_top_level(
         //   which case we've found a better move to play
         // Either way, it's advantageous to use the best move from incomplete searches.
         Some(best_move) ->
-          Ok(TopLevelSearchResult(best_move:, cached_positions:))
+          Ok(TopLevelSearchResult(best_move:, best_eval:, cached_positions:))
       })
 
       let eval = -eval
@@ -152,7 +163,6 @@ fn search(
   depth: Int,
   best_eval: Int,
   best_opponent_move: Int,
-  depth_searched: Int,
   extensions: Int,
   until: Until,
 ) -> SearchResult {
@@ -170,12 +180,16 @@ fn search(
     SearchResult(0, cached_positions, hash.Exact, True),
   )
 
+  use <- bool.guard(
+    best_eval == checkmate,
+    SearchResult(best_eval, cached_positions, hash.Exact, True),
+  )
+
   case
     hash.get(
       cached_positions,
       game.zobrist_hash,
       depth,
-      depth_searched,
       best_eval,
       best_opponent_move,
     )
@@ -188,9 +202,7 @@ fn search(
         // we stop searching.
         [] -> {
           let eval = case game.attack_information.in_check {
-            // Sooner checkmate is better. Or from the perspective of the side being
-            // mated, later checkmate is better.
-            True -> checkmate + depth_searched
+            True -> -checkmate
             False -> 0
           }
           let cached_positions =
@@ -198,7 +210,6 @@ fn search(
               cached_positions,
               game.zobrist_hash,
               depth,
-              depth_searched,
               hash.Exact,
               eval,
             )
@@ -221,7 +232,6 @@ fn search(
                   cached_positions,
                   game.zobrist_hash,
                   depth,
-                  depth_searched,
                   hash.Exact,
                   eval,
                 )
@@ -241,7 +251,6 @@ fn search(
                   depth,
                   best_eval,
                   best_opponent_move,
-                  depth_searched,
                   hash.Ceiling,
                   extensions,
                   until,
@@ -254,7 +263,6 @@ fn search(
                   cached_positions,
                   game.zobrist_hash,
                   depth,
-                  depth_searched,
                   eval_kind,
                   eval,
                 )
@@ -277,7 +285,6 @@ fn search_loop(
   // higher than this, we can discard it. That position is too good and we can
   // assume that our opponent would never let us get there.
   best_opponent_move: Int,
-  depth_searched: Int,
   eval_kind: hash.CacheKind,
   extensions: Int,
   until: Until,
@@ -312,7 +319,6 @@ fn search_loop(
           depth - 1 + extension,
           -best_opponent_move,
           -best_eval,
-          depth_searched + 1,
           extensions + extension,
           until,
         )
@@ -343,7 +349,6 @@ fn search_loop(
         depth,
         best_eval,
         best_opponent_move,
-        depth_searched,
         eval_kind,
         extensions,
         until,

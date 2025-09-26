@@ -502,6 +502,13 @@ pub fn search_test_() {
     )
   // b4f4
   assert move == move.Capture(from: 25, to: 29)
+
+  let assert Ok(move) =
+    starfish.search(
+      starfish.from_fen("8/8/5k1K/8/5r2/8/8/8 b - - 34 18"),
+      until: starfish.Depth(10),
+    )
+  assert move == move.Move(from: 29, to: 31)
 }
 
 pub fn perft_initial_position_test_() {
