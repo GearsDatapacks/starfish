@@ -408,8 +408,8 @@ const capture_promotion_bonus = 10_000
 /// order than random. Searching better moves first improves alpha-beta pruning,
 /// allowing us to search more positions.
 fn guess_eval(game: Game, move: Move, phase: Int) -> Int {
-  let assert board.Occupied(piece:, colour:) = board.get(game.board, move.from)
-    as "Invalid move trying to move empty piece"
+  let piece = move.moving_piece(move)
+  let colour = game.to_move
 
   let moving_piece = case move {
     move.Promotion(piece:, ..) -> piece
@@ -422,13 +422,7 @@ fn guess_eval(game: Game, move: Move, phase: Int) -> Int {
   let position_improvement = to_score - from_score
 
   let move_specific_score = case move {
-    // TODO store information in moves so we don't have to retrieve it from the
-    // board every time.
-    move.Capture(..) -> {
-      let assert board.Occupied(piece: captured_piece, colour: _) =
-        board.get(game.board, move.to)
-        as "Invalid capture moving to empty square"
-
+    move.Capture(captured_piece:, ..) -> {
       capture_promotion_bonus
       // Capturing a more valuable piece is better, and using a less valuable
       // piece to capture is usually better. However, we prioritise the value of

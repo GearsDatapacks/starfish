@@ -13,10 +13,23 @@ import starfish/internal/piece_table
 
 pub type Move {
   Castle(from: Int, to: Int)
-  Move(from: Int, to: Int)
-  Capture(from: Int, to: Int)
+  Move(from: Int, to: Int, piece: board.Piece)
+  Capture(from: Int, to: Int, piece: board.Piece, captured_piece: board.Piece)
   EnPassant(from: Int, to: Int)
-  Promotion(from: Int, to: Int, piece: board.Piece)
+  Promotion(
+    from: Int,
+    to: Int,
+    piece: board.Piece,
+    captured_piece: Option(board.Piece),
+  )
+}
+
+pub fn moving_piece(move: Move) -> board.Piece {
+  case move {
+    Capture(piece:, ..) | Move(piece:, ..) -> piece
+    Castle(..) -> board.King
+    EnPassant(..) | Promotion(..) -> board.Pawn
+  }
 }
 
 pub fn legal(game: Game) -> List(Move) {
@@ -83,11 +96,11 @@ fn moves_for_piece(
 ) -> List(Move) {
   case piece {
     board.Bishop ->
-      sliding_moves(game, position, moves, direction.bishop_directions)
+      sliding_moves(game, piece, position, moves, direction.bishop_directions)
     board.Rook ->
-      sliding_moves(game, position, moves, direction.rook_directions)
+      sliding_moves(game, piece, position, moves, direction.rook_directions)
     board.Queen ->
-      sliding_moves(game, position, moves, direction.queen_directions)
+      sliding_moves(game, piece, position, moves, direction.queen_directions)
     board.King -> king_moves(game, position, moves, direction.queen_directions)
     board.Knight ->
       knight_moves(game, position, moves, direction.knight_directions)
@@ -120,8 +133,14 @@ fn pawn_moves(game: Game, position: Int, moves: List(Move)) -> List(Move) {
       {
         False -> moves
         True if is_promotion ->
-          add_promotions(position, forward_one, moves, board.pawn_promotions)
-        True -> [Move(from: position, to: forward_one), ..moves]
+          add_promotions(
+            position,
+            forward_one,
+            None,
+            moves,
+            board.pawn_promotions,
+          )
+        True -> [Move(board.Pawn, from: position, to: forward_one), ..moves]
       }
 
       let can_double_move = case game.to_move, position / 8 {
@@ -136,7 +155,7 @@ fn pawn_moves(game: Game, position: Int, moves: List(Move)) -> List(Move) {
         board.Empty ->
           case can_move(position, forward_two, game.attack_information) {
             False -> moves
-            True -> [Move(from: position, to: forward_two), ..moves]
+            True -> [Move(board.Pawn, from: position, to: forward_two), ..moves]
           }
         board.Occupied(_, _) | board.OffBoard -> moves
       }
@@ -146,12 +165,21 @@ fn pawn_moves(game: Game, position: Int, moves: List(Move)) -> List(Move) {
 
   let new_position = direction.in_direction(position, left)
   let moves = case board.get(game.board, new_position) {
-    board.Occupied(colour:, ..) if colour != game.to_move ->
+    board.Occupied(colour:, piece: captured_piece) if colour != game.to_move ->
       case can_move(position, new_position, game.attack_information) {
         False -> moves
         True if is_promotion ->
-          add_promotions(position, new_position, moves, board.pawn_promotions)
-        True -> [Capture(from: position, to: new_position), ..moves]
+          add_promotions(
+            position,
+            new_position,
+            Some(captured_piece),
+            moves,
+            board.pawn_promotions,
+          )
+        True -> [
+          Capture(board.Pawn, from: position, to: new_position, captured_piece:),
+          ..moves
+        ]
       }
     board.Empty if game.en_passant_square == Some(new_position) ->
       case en_passant_is_valid(game, position, new_position) {
@@ -163,12 +191,21 @@ fn pawn_moves(game: Game, position: Int, moves: List(Move)) -> List(Move) {
 
   let new_position = direction.in_direction(position, right)
   case board.get(game.board, new_position) {
-    board.Occupied(colour:, ..) if colour != game.to_move ->
+    board.Occupied(colour:, piece: captured_piece) if colour != game.to_move ->
       case can_move(position, new_position, game.attack_information) {
         False -> moves
         True if is_promotion ->
-          add_promotions(position, new_position, moves, board.pawn_promotions)
-        True -> [Capture(from: position, to: new_position), ..moves]
+          add_promotions(
+            position,
+            new_position,
+            Some(captured_piece),
+            moves,
+            board.pawn_promotions,
+          )
+        True -> [
+          Capture(board.Pawn, from: position, to: new_position, captured_piece:),
+          ..moves
+        ]
       }
     board.Empty if game.en_passant_square == Some(new_position) ->
       case en_passant_is_valid(game, position, new_position) {
@@ -288,13 +325,20 @@ fn in_check_after_en_passant_loop(
 fn add_promotions(
   from: Int,
   to: Int,
+  captured_piece: Option(board.Piece),
   moves: List(Move),
   pieces: List(board.Piece),
 ) -> List(Move) {
   case pieces {
     [] -> moves
     [piece, ..pieces] ->
-      add_promotions(from, to, [Promotion(from:, to:, piece:), ..moves], pieces)
+      add_promotions(
+        from,
+        to,
+        captured_piece,
+        [Promotion(from:, to:, piece:, captured_piece:), ..moves],
+        pieces,
+      )
   }
 }
 
@@ -312,12 +356,25 @@ fn knight_moves(
         board.Empty ->
           case can_move(position, new_position, game.attack_information) {
             False -> moves
-            True -> [Move(from: position, to: new_position), ..moves]
+            True -> [
+              Move(board.Knight, from: position, to: new_position),
+              ..moves
+            ]
           }
-        board.Occupied(colour:, ..) if colour != game.to_move ->
+        board.Occupied(colour:, piece: captured_piece)
+          if colour != game.to_move
+        ->
           case can_move(position, new_position, game.attack_information) {
             False -> moves
-            True -> [Capture(from: position, to: new_position), ..moves]
+            True -> [
+              Capture(
+                board.Knight,
+                from: position,
+                to: new_position,
+                captured_piece:,
+              ),
+              ..moves
+            ]
           }
         board.Occupied(_, _) | board.OffBoard -> moves
       }
@@ -388,12 +445,25 @@ fn regular_king_moves(
         board.Empty ->
           case king_can_move(new_position, game.attack_information) {
             False -> moves
-            True -> [Move(from: position, to: new_position), ..moves]
+            True -> [
+              Move(board.King, from: position, to: new_position),
+              ..moves
+            ]
           }
-        board.Occupied(colour:, ..) if colour != game.to_move ->
+        board.Occupied(colour:, piece: captured_piece)
+          if colour != game.to_move
+        ->
           case king_can_move(new_position, game.attack_information) {
             False -> moves
-            True -> [Capture(from: position, to: new_position), ..moves]
+            True -> [
+              Capture(
+                board.King,
+                from: position,
+                to: new_position,
+                captured_piece:,
+              ),
+              ..moves
+            ]
           }
         board.Occupied(_, _) | board.OffBoard -> moves
       }
@@ -405,6 +475,7 @@ fn regular_king_moves(
 
 fn sliding_moves(
   game: Game,
+  piece: board.Piece,
   position: Int,
   moves: List(Move),
   directions: List(Direction),
@@ -414,8 +485,16 @@ fn sliding_moves(
     [direction, ..directions] ->
       sliding_moves(
         game,
+        piece,
         position,
-        sliding_moves_in_direction(game, position, position, direction, moves),
+        sliding_moves_in_direction(
+          game,
+          piece,
+          position,
+          position,
+          direction,
+          moves,
+        ),
         directions,
       )
   }
@@ -423,6 +502,7 @@ fn sliding_moves(
 
 fn sliding_moves_in_direction(
   game: Game,
+  piece: board.Piece,
   start_position: Int,
   position: Int,
   direction: Direction,
@@ -433,18 +513,27 @@ fn sliding_moves_in_direction(
     board.Empty ->
       sliding_moves_in_direction(
         game,
+        piece,
         start_position,
         new_position,
         direction,
         case can_move(start_position, new_position, game.attack_information) {
           False -> moves
-          True -> [Move(from: start_position, to: new_position), ..moves]
+          True -> [Move(piece, from: start_position, to: new_position), ..moves]
         },
       )
-    board.Occupied(colour:, ..) if colour != game.to_move ->
+    board.Occupied(colour:, piece: captured_piece) if colour != game.to_move ->
       case can_move(start_position, new_position, game.attack_information) {
         False -> moves
-        True -> [Capture(from: start_position, to: new_position), ..moves]
+        True -> [
+          Capture(
+            piece,
+            from: start_position,
+            to: new_position,
+            captured_piece:,
+          ),
+          ..moves
+        ]
       }
     board.Occupied(_, _) | board.OffBoard -> moves
   }
@@ -452,12 +541,15 @@ fn sliding_moves_in_direction(
 
 pub fn apply(game: Game, move: Move) -> game.Game {
   case move {
-    Capture(from:, to:) -> do_apply(game, from, to, False, None, True)
+    Capture(from:, to:, piece:, captured_piece:) ->
+      do_apply(game, piece, from, to, False, None, Some(captured_piece))
     Castle(from:, to:) -> apply_castle(game, from, to, to % 8 == 2)
-    EnPassant(from:, to:) -> do_apply(game, from, to, True, None, True)
-    Move(from:, to:) -> do_apply(game, from, to, False, None, False)
-    Promotion(from:, to:, piece:) ->
-      do_apply(game, from, to, False, Some(piece), False)
+    EnPassant(from:, to:) ->
+      do_apply(game, board.Pawn, from, to, True, None, None)
+    Move(from:, to:, piece:) ->
+      do_apply(game, piece, from, to, False, None, None)
+    Promotion(from:, to:, piece:, captured_piece:) ->
+      do_apply(game, board.Pawn, from, to, False, Some(piece), captured_piece)
   }
 }
 
@@ -597,11 +689,12 @@ fn apply_castle(game: Game, from: Int, to: Int, long: Bool) -> Game {
 
 fn do_apply(
   game: Game,
+  piece: board.Piece,
   from: Int,
   to: Int,
   en_passant: Bool,
   promotion: Option(board.Piece),
-  capture: Bool,
+  captured_piece: Option(board.Piece),
 ) -> Game {
   let Game(
     board:,
@@ -635,26 +728,30 @@ fn do_apply(
     board.White -> #(white_pieces, black_pieces)
   }
 
-  let assert board.Occupied(piece:, colour:) = board.get(board, from)
-    as "Tried to apply move from invalid position"
+  let our_colour = to_move
+  let enemy_colour = case to_move {
+    board.Black -> board.White
+    board.White -> board.Black
+  }
 
   let castling =
     castling
     |> remove_castling(from)
     |> remove_castling(to)
 
-  let one_way_move = capture || piece == board.Pawn
+  let one_way_move = captured_piece != None || piece == board.Pawn
 
   let zobrist_hash =
     previous_hash
     |> hash.toggle_to_move
-    |> hash.toggle_piece(from, piece, colour)
+    |> hash.toggle_piece(from, piece, our_colour)
 
   let phase =
     game.phase(white_pieces.non_pawn_material, black_pieces.non_pawn_material)
 
   let our_piece_square_score =
-    our_piece_square_score - piece_table.piece_score(piece, colour, from, phase)
+    our_piece_square_score
+    - piece_table.piece_score(piece, our_colour, from, phase)
 
   let #(piece, our_pawn_material, our_non_pawn_material) = case promotion {
     None -> #(piece, our_pawn_material, our_non_pawn_material)
@@ -666,31 +763,32 @@ fn do_apply(
   }
 
   let our_piece_square_score =
-    our_piece_square_score + piece_table.piece_score(piece, colour, to, phase)
+    our_piece_square_score
+    + piece_table.piece_score(piece, our_colour, to, phase)
 
-  let zobrist_hash = hash.toggle_piece(zobrist_hash, to, piece, colour)
+  let zobrist_hash = hash.toggle_piece(zobrist_hash, to, piece, our_colour)
 
   let #(
     zobrist_hash,
     opposing_pawn_material,
     opposing_non_pawn_material,
     opposing_piece_square_score,
-  ) = case board.get(board, to) {
-    board.Occupied(piece: board.Pawn, colour:) -> #(
-      hash.toggle_piece(zobrist_hash, to, board.Pawn, colour),
+  ) = case captured_piece {
+    Some(board.Pawn) -> #(
+      hash.toggle_piece(zobrist_hash, to, board.Pawn, enemy_colour),
       opposing_pawn_material - board.pawn_value,
       opposing_non_pawn_material,
       opposing_piece_square_score
-        - piece_table.piece_score(board.Pawn, colour, to, phase),
+        - piece_table.piece_score(board.Pawn, enemy_colour, to, phase),
     )
-    board.Occupied(piece:, colour:) -> #(
-      hash.toggle_piece(zobrist_hash, to, piece, colour),
+    Some(piece) -> #(
+      hash.toggle_piece(zobrist_hash, to, piece, enemy_colour),
       opposing_pawn_material,
       opposing_non_pawn_material - board.piece_value(piece),
       opposing_piece_square_score
-        - piece_table.piece_score(piece, colour, to, phase),
+        - piece_table.piece_score(piece, enemy_colour, to, phase),
     )
-    board.Empty | board.OffBoard -> #(
+    None -> #(
       zobrist_hash,
       opposing_pawn_material,
       opposing_non_pawn_material,
@@ -701,14 +799,22 @@ fn do_apply(
   let board =
     board
     |> dict.delete(from)
-    |> dict.insert(to, #(piece, colour))
+    |> dict.insert(to, #(piece, our_colour))
 
-  let #(board, zobrist_hash) = case en_passant, en_passant_square, colour {
+  let #(
+    board,
+    zobrist_hash,
+    opposing_pawn_material,
+    opposing_piece_square_score,
+  ) = case en_passant, en_passant_square, our_colour {
     True, Some(square), board.White -> {
       let ep_square = square - 8
       #(
         dict.delete(board, ep_square),
         hash.toggle_piece(zobrist_hash, ep_square, board.Pawn, board.Black),
+        opposing_pawn_material - board.pawn_value,
+        opposing_piece_square_score
+          - piece_table.piece_score(board.Pawn, board.Black, ep_square, phase),
       )
     }
     True, Some(square), board.Black -> {
@@ -716,9 +822,17 @@ fn do_apply(
       #(
         dict.delete(board, ep_square),
         hash.toggle_piece(zobrist_hash, ep_square, board.Pawn, board.White),
+        opposing_pawn_material - board.pawn_value,
+        opposing_piece_square_score
+          - piece_table.piece_score(board.Pawn, board.White, ep_square, phase),
       )
     }
-    _, _, _ -> #(board, zobrist_hash)
+    _, _, _ -> #(
+      board,
+      zobrist_hash,
+      opposing_pawn_material,
+      opposing_piece_square_score,
+    )
   }
 
   let en_passant_square = case piece, to - from {
@@ -758,10 +872,7 @@ fn do_apply(
     board.Black -> #(opposing_pieces, our_pieces)
   }
 
-  let to_move = case to_move {
-    board.Black -> board.White
-    board.White -> board.Black
-  }
+  let to_move = enemy_colour
 
   let #(half_moves, previous_positions) = case one_way_move {
     True -> #(0, [])
@@ -823,9 +934,7 @@ pub fn to_long_algebraic_notation(move: Move) -> String {
 }
 
 pub fn to_standard_algebraic_notation(move: Move, game: Game) -> String {
-  let assert board.Occupied(piece:, colour: _) =
-    board.get(game.board, move.from)
-    as "Legal moves should only move valid pieces"
+  let piece = moving_piece(move)
 
   case move {
     Castle(from: _, to:) -> {
@@ -835,18 +944,15 @@ pub fn to_standard_algebraic_notation(move: Move, game: Game) -> String {
         True -> "O-O-O"
       }
     }
-    Capture(from:, to:) if piece == board.Pawn ->
+    Capture(from:, to:, ..) if piece == board.Pawn ->
       pawn_move_to_san(from, to, True, None)
     EnPassant(from:, to:) -> pawn_move_to_san(from, to, True, None)
-    Promotion(from:, to:, piece:) -> {
-      let is_capture = case board.get(game.board, move.to) {
-        board.Occupied(..) -> True
-        board.Empty | board.OffBoard -> False
-      }
-      pawn_move_to_san(from, to, is_capture, Some(piece))
-    }
-    Move(from:, to:) -> move_to_san(game, piece, from, to, False)
-    Capture(from:, to:) -> move_to_san(game, piece, from, to, True)
+    Promotion(from:, to:, piece:, captured_piece: None) ->
+      pawn_move_to_san(from, to, False, Some(piece))
+    Promotion(from:, to:, piece:, captured_piece: Some(_)) ->
+      pawn_move_to_san(from, to, True, Some(piece))
+    Move(from:, to:, ..) -> move_to_san(game, piece, from, to, False)
+    Capture(from:, to:, ..) -> move_to_san(game, piece, from, to, True)
   }
 }
 
@@ -886,9 +992,7 @@ fn disambiguation(
   use <- bool.guard(move.to != to, disambiguation)
   use <- bool.guard(move.from == from, disambiguation)
 
-  let assert board.Occupied(piece: moving_piece, colour: _) =
-    board.get(game.board, move.from)
-    as "Legal moves should only move valid pieces"
+  let moving_piece = moving_piece(move)
 
   use <- bool.guard(moving_piece != piece, disambiguation)
 
@@ -1019,7 +1123,7 @@ pub fn from_standard_algebraic_notation(
       use #(first, move) <- result.try(parse_move_part(move))
       use #(second, move) <- result.try(parse_move_part(move))
 
-      use #(from_file, from_rank, capture, to_file, to_rank, move) <- result.try(
+      use #(from_file, from_rank, to_file, to_rank, move) <- result.try(
         case first, second {
           // `xx` is not an allowed move
           CaptureSpecifier, CaptureSpecifier -> Error(Nil)
@@ -1027,58 +1131,53 @@ pub fn from_standard_algebraic_notation(
           File(file), CaptureSpecifier -> {
             let from_file = Some(file)
             let from_rank = None
-            let capture = True
             use #(to_file, move) <- result.try(parse_file(move))
             use #(to_rank, move) <- result.try(parse_rank(move))
 
-            Ok(#(from_file, from_rank, capture, to_file, to_rank, move))
+            Ok(#(from_file, from_rank, to_file, to_rank, move))
           }
           // We disambiguate the rank and it's a capture (e.g. `R5xc4`)
           Rank(rank), CaptureSpecifier -> {
             let from_file = None
             let from_rank = Some(rank)
-            let capture = True
             use #(to_file, move) <- result.try(parse_file(move))
             use #(to_rank, move) <- result.try(parse_rank(move))
 
-            Ok(#(from_file, from_rank, capture, to_file, to_rank, move))
+            Ok(#(from_file, from_rank, to_file, to_rank, move))
           }
           // It's a capture, and we've parsed the file of the destination (e.g.
           // `Bxa5`)
           CaptureSpecifier, File(to_file) -> {
             let from_file = None
             let from_rank = None
-            let capture = True
             use #(to_rank, move) <- result.try(parse_rank(move))
 
-            Ok(#(from_file, from_rank, capture, to_file, to_rank, move))
+            Ok(#(from_file, from_rank, to_file, to_rank, move))
           }
           // We disambiguate the file and we've parsed the file of the destination
           // (e.g. `Qhd4`)
           File(from_file), File(to_file) -> {
             let from_file = Some(from_file)
             let from_rank = None
-            let capture = False
             use #(to_rank, move) <- result.try(parse_rank(move))
 
-            Ok(#(from_file, from_rank, capture, to_file, to_rank, move))
+            Ok(#(from_file, from_rank, to_file, to_rank, move))
           }
           // We disambiguate the rank and we've parsed the file of the destination
           // (e.g. `R7d2`)
           Rank(rank), File(to_file) -> {
             let from_file = None
             let from_rank = Some(rank)
-            let capture = False
             use #(to_rank, move) <- result.try(parse_rank(move))
 
-            Ok(#(from_file, from_rank, capture, to_file, to_rank, move))
+            Ok(#(from_file, from_rank, to_file, to_rank, move))
           }
           // Capture followed by a rank is not allowed, e.g. `Rx1`
           CaptureSpecifier, Rank(_) -> Error(Nil)
           // We've parsed the file and rank, and there's no more move to parse,
           // so we're done. (e.g. `Nf3`)
           File(file), Rank(rank) if move == "" ->
-            Ok(#(None, None, False, file, rank, move))
+            Ok(#(None, None, file, rank, move))
           // We've disambiguated the rank and file, and we still need to parse
           // the rest of the move. (e.g. `Qh4xe1`)
           File(from_file), Rank(from_rank) ->
@@ -1086,19 +1185,17 @@ pub fn from_standard_algebraic_notation(
               Ok(#(CaptureSpecifier, move)) -> {
                 let from_file = Some(from_file)
                 let from_rank = Some(from_rank)
-                let capture = True
                 use #(to_file, move) <- result.try(parse_file(move))
                 use #(to_rank, move) <- result.try(parse_rank(move))
 
-                Ok(#(from_file, from_rank, capture, to_file, to_rank, move))
+                Ok(#(from_file, from_rank, to_file, to_rank, move))
               }
               Ok(#(File(to_file), _)) -> {
                 let from_file = Some(from_file)
                 let from_rank = Some(from_rank)
-                let capture = False
                 use #(to_rank, move) <- result.try(parse_rank(move))
 
-                Ok(#(from_file, from_rank, capture, to_file, to_rank, move))
+                Ok(#(from_file, from_rank, to_file, to_rank, move))
               }
               Ok(#(Rank(_), _)) | Error(_) -> Error(Nil)
             }
@@ -1111,9 +1208,10 @@ pub fn from_standard_algebraic_notation(
 
       let to = to_rank * 8 + to_file
 
-      case get_pieces(game, piece_kind, legal_moves, from_file, from_rank, to) {
-        [from] if capture -> Ok(Capture(from:, to:))
-        [from] -> Ok(Move(from:, to:))
+      case
+        get_moves(game, piece_kind, legal_moves, from_file, from_rank, to, None)
+      {
+        [move] -> Ok(move)
         // If there is more than one valid move, the notation is ambiguous, and
         // so we error. If there are no valid moves, we also error.
         _ -> Error(Nil)
@@ -1178,14 +1276,14 @@ fn parse_pawn_move(
 ) -> Result(Move, Nil) {
   use #(file, move) <- result.try(parse_file(move))
 
-  use #(from_file, is_capture, to_file, move) <- result.try(case move {
+  use #(from_file, to_file, move) <- result.try(case move {
     "x" <> move ->
       parse_file(move)
       |> result.map(fn(pair) {
         let #(to_file, move) = pair
-        #(Some(file), True, to_file, move)
+        #(Some(file), to_file, move)
       })
-    _ -> Ok(#(None, False, file, move))
+    _ -> Ok(#(None, file, move))
   })
 
   use #(rank, move) <- result.try(parse_rank(move))
@@ -1202,28 +1300,25 @@ fn parse_pawn_move(
   let to = rank * 8 + to_file
 
   case
-    get_pieces(game, board.Pawn, legal_moves, from_file, None, to),
-    promotion
+    get_moves(game, board.Pawn, legal_moves, from_file, None, to, promotion)
   {
-    [from], Some(piece) -> Ok(Promotion(from:, to:, piece:))
-    [from], _ if game.en_passant_square == Some(to) -> Ok(EnPassant(from:, to:))
-    [from], _ if is_capture -> Ok(Capture(from:, to:))
-    [from], _ -> Ok(Move(from:, to:))
-    _, _ -> Error(Nil)
+    [move] -> Ok(move)
+    _ -> Error(Nil)
   }
 }
 
-/// Gets the possible destination squares for a move, based on the information
-/// we know.
-fn get_pieces(
+/// Gets the possible moves for a piece, based on the information we know from
+/// SAN.
+fn get_moves(
   game: Game,
   find_piece: board.Piece,
   legal_moves: List(Move),
   from_file: option.Option(Int),
   from_rank: option.Option(Int),
   to: Int,
-) -> List(Int) {
-  use pieces, position, #(piece, colour) <- dict.fold(game.board, [])
+  promotion: Option(board.Piece),
+) -> List(Move) {
+  use moves, position, #(piece, colour) <- dict.fold(game.board, [])
   let is_valid =
     colour == game.to_move
     && piece == find_piece
@@ -1235,11 +1330,24 @@ fn get_pieces(
       None -> True
       Some(rank) -> rank == position / 8
     }
-    && list.any(legal_moves, fn(move) { move.to == to && move.from == position })
 
   case is_valid {
-    False -> pieces
-    True -> [position, ..pieces]
+    False -> moves
+    True ->
+      case
+        list.find(legal_moves, fn(move) {
+          let valid = move.to == to && move.from == position
+          case move, promotion {
+            Promotion(piece:, ..), Some(promotion) if piece == promotion ->
+              valid
+            Promotion(..), _ -> False
+            _, _ -> valid
+          }
+        })
+      {
+        Error(_) -> moves
+        Ok(move) -> [move, ..moves]
+      }
   }
 }
 
