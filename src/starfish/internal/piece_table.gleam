@@ -151,12 +151,11 @@ fn get(table: Table, position: Int, colour: board.Colour) -> Int {
   }
 }
 
-/// Calculate the score for a given piece at a position at some point in the game
-pub fn piece_score(
+/// Calculate the score for a given piece at a position during the middlegame
+pub fn piece_score_midgame(
   piece: board.Piece,
   colour: board.Colour,
   position: Int,
-  phase: Int,
 ) -> Int {
   let table = case piece {
     board.Pawn -> pawn
@@ -167,17 +166,23 @@ pub fn piece_score(
     board.King -> king
   }
 
-  let middlegame_value = get(table, position, colour)
-
-  case piece {
-    board.King if phase > 0 ->
-      interpolate(middlegame_value, get(king_endgame, position, colour), phase)
-    board.Pawn if phase > 0 ->
-      interpolate(middlegame_value, get(pawn_endgame, position, colour), phase)
-    _ -> middlegame_value
-  }
+  get(table, position, colour)
 }
 
-fn interpolate(middlegame_value: Int, endgame_value: Int, phase: Int) -> Int {
-  { middlegame_value * { 128 - phase } + endgame_value * phase } / 128
+/// Calculate the score for a given piece at a position in the endgame
+pub fn piece_score_endgame(
+  piece: board.Piece,
+  colour: board.Colour,
+  position: Int,
+) -> Int {
+  let table = case piece {
+    board.Pawn -> pawn_endgame
+    board.King -> king_endgame
+    board.Bishop -> bishop
+    board.Knight -> knight
+    board.Queen -> queen
+    board.Rook -> rook
+  }
+
+  get(table, position, colour)
 }

@@ -568,13 +568,15 @@ fn apply_castle(game: Game, from: Int, to: Int, long: Bool) -> Game {
       king_position: white_king_position,
       non_pawn_material: white_non_pawn_material,
       pawn_material: white_pawn_material,
-      piece_square_score: white_piece_square_score,
+      piece_square_score_midgame: white_piece_square_score_midgame,
+      piece_square_score_endgame: white_piece_square_score_endgame,
     ),
     black_pieces: game.PieceInfo(
       king_position: black_king_position,
       non_pawn_material: black_non_pawn_material,
       pawn_material: black_pawn_material,
-      piece_square_score: black_piece_square_score,
+      piece_square_score_midgame: black_piece_square_score_midgame,
+      piece_square_score_endgame: black_piece_square_score_endgame,
     ),
   ) = game
 
@@ -609,24 +611,39 @@ fn apply_castle(game: Game, from: Int, to: Int, long: Bool) -> Game {
     |> hash.toggle_piece(rook_from, board.Rook, to_move)
     |> hash.toggle_piece(rook_to, board.Rook, to_move)
 
-  let phase = game.phase(white_non_pawn_material, black_non_pawn_material)
-
-  let #(white_piece_square_score, black_piece_square_score) = case to_move {
+  let #(
+    white_piece_square_score_midgame,
+    white_piece_square_score_endgame,
+    black_piece_square_score_midgame,
+    black_piece_square_score_endgame,
+  ) = case to_move {
     board.Black -> #(
-      white_piece_square_score,
-      black_piece_square_score
-        - piece_table.piece_score(board.King, to_move, from, phase)
-        - piece_table.piece_score(board.Rook, to_move, rook_from, phase)
-        + piece_table.piece_score(board.King, to_move, to, phase)
-        + piece_table.piece_score(board.Rook, to_move, rook_to, phase),
+      white_piece_square_score_midgame,
+      white_piece_square_score_endgame,
+      black_piece_square_score_midgame
+        - piece_table.piece_score_midgame(board.King, to_move, from)
+        - piece_table.piece_score_midgame(board.Rook, to_move, rook_from)
+        + piece_table.piece_score_midgame(board.King, to_move, to)
+        + piece_table.piece_score_midgame(board.Rook, to_move, rook_to),
+      black_piece_square_score_endgame
+        - piece_table.piece_score_endgame(board.King, to_move, from)
+        - piece_table.piece_score_endgame(board.Rook, to_move, rook_from)
+        + piece_table.piece_score_endgame(board.King, to_move, to)
+        + piece_table.piece_score_endgame(board.Rook, to_move, rook_to),
     )
     board.White -> #(
-      white_piece_square_score
-        - piece_table.piece_score(board.King, to_move, from, phase)
-        - piece_table.piece_score(board.Rook, to_move, rook_from, phase)
-        + piece_table.piece_score(board.King, to_move, to, phase)
-        + piece_table.piece_score(board.Rook, to_move, rook_to, phase),
-      black_piece_square_score,
+      white_piece_square_score_midgame
+        - piece_table.piece_score_midgame(board.King, to_move, from)
+        - piece_table.piece_score_midgame(board.Rook, to_move, rook_from)
+        + piece_table.piece_score_midgame(board.King, to_move, to)
+        + piece_table.piece_score_midgame(board.Rook, to_move, rook_to),
+      white_piece_square_score_endgame
+        - piece_table.piece_score_endgame(board.King, to_move, from)
+        - piece_table.piece_score_endgame(board.Rook, to_move, rook_from)
+        + piece_table.piece_score_endgame(board.King, to_move, to)
+        + piece_table.piece_score_endgame(board.Rook, to_move, rook_to),
+      black_piece_square_score_midgame,
+      black_piece_square_score_endgame,
     )
   }
 
@@ -676,13 +693,15 @@ fn apply_castle(game: Game, from: Int, to: Int, long: Bool) -> Game {
       king_position: white_king_position,
       non_pawn_material: white_non_pawn_material,
       pawn_material: white_pawn_material,
-      piece_square_score: white_piece_square_score,
+      piece_square_score_midgame: white_piece_square_score_midgame,
+      piece_square_score_endgame: white_piece_square_score_endgame,
     ),
     black_pieces: game.PieceInfo(
       king_position: black_king_position,
       non_pawn_material: black_non_pawn_material,
       pawn_material: black_pawn_material,
-      piece_square_score: black_piece_square_score,
+      piece_square_score_midgame: black_piece_square_score_midgame,
+      piece_square_score_endgame: black_piece_square_score_endgame,
     ),
   )
 }
@@ -715,13 +734,15 @@ fn do_apply(
       king_position: our_king_position,
       non_pawn_material: our_non_pawn_material,
       pawn_material: our_pawn_material,
-      piece_square_score: our_piece_square_score,
+      piece_square_score_midgame: our_piece_square_score_midgame,
+      piece_square_score_endgame: our_piece_square_score_endgame,
     ),
     game.PieceInfo(
       king_position: opposing_king_position,
       non_pawn_material: opposing_non_pawn_material,
       pawn_material: opposing_pawn_material,
-      piece_square_score: opposing_piece_square_score,
+      piece_square_score_midgame: opposing_piece_square_score_midgame,
+      piece_square_score_endgame: opposing_piece_square_score_endgame,
     ),
   ) = case to_move {
     board.Black -> #(black_pieces, white_pieces)
@@ -746,12 +767,12 @@ fn do_apply(
     |> hash.toggle_to_move
     |> hash.toggle_piece(from, piece, our_colour)
 
-  let phase =
-    game.phase(white_pieces.non_pawn_material, black_pieces.non_pawn_material)
-
-  let our_piece_square_score =
-    our_piece_square_score
-    - piece_table.piece_score(piece, our_colour, from, phase)
+  let our_piece_square_score_midgame =
+    our_piece_square_score_midgame
+    - piece_table.piece_score_midgame(piece, our_colour, from)
+  let our_piece_square_score_endgame =
+    our_piece_square_score_endgame
+    - piece_table.piece_score_endgame(piece, our_colour, from)
 
   let #(piece, our_pawn_material, our_non_pawn_material) = case promotion {
     None -> #(piece, our_pawn_material, our_non_pawn_material)
@@ -762,9 +783,12 @@ fn do_apply(
     )
   }
 
-  let our_piece_square_score =
-    our_piece_square_score
-    + piece_table.piece_score(piece, our_colour, to, phase)
+  let our_piece_square_score_midgame =
+    our_piece_square_score_midgame
+    + piece_table.piece_score_midgame(piece, our_colour, to)
+  let our_piece_square_score_endgame =
+    our_piece_square_score_endgame
+    + piece_table.piece_score_endgame(piece, our_colour, to)
 
   let zobrist_hash = hash.toggle_piece(zobrist_hash, to, piece, our_colour)
 
@@ -772,27 +796,33 @@ fn do_apply(
     zobrist_hash,
     opposing_pawn_material,
     opposing_non_pawn_material,
-    opposing_piece_square_score,
+    opposing_piece_square_score_midgame,
+    opposing_piece_square_score_endgame,
   ) = case captured_piece {
     Some(board.Pawn) -> #(
       hash.toggle_piece(zobrist_hash, to, board.Pawn, enemy_colour),
       opposing_pawn_material - board.pawn_value,
       opposing_non_pawn_material,
-      opposing_piece_square_score
-        - piece_table.piece_score(board.Pawn, enemy_colour, to, phase),
+      opposing_piece_square_score_midgame
+        - piece_table.piece_score_midgame(board.Pawn, enemy_colour, to),
+      opposing_piece_square_score_endgame
+        - piece_table.piece_score_endgame(board.Pawn, enemy_colour, to),
     )
     Some(piece) -> #(
       hash.toggle_piece(zobrist_hash, to, piece, enemy_colour),
       opposing_pawn_material,
       opposing_non_pawn_material - board.piece_value(piece),
-      opposing_piece_square_score
-        - piece_table.piece_score(piece, enemy_colour, to, phase),
+      opposing_piece_square_score_midgame
+        - piece_table.piece_score_midgame(piece, enemy_colour, to),
+      opposing_piece_square_score_endgame
+        - piece_table.piece_score_endgame(piece, enemy_colour, to),
     )
     None -> #(
       zobrist_hash,
       opposing_pawn_material,
       opposing_non_pawn_material,
-      opposing_piece_square_score,
+      opposing_piece_square_score_midgame,
+      opposing_piece_square_score_endgame,
     )
   }
 
@@ -805,7 +835,8 @@ fn do_apply(
     board,
     zobrist_hash,
     opposing_pawn_material,
-    opposing_piece_square_score,
+    opposing_piece_square_score_midgame,
+    opposing_piece_square_score_endgame,
   ) = case en_passant, en_passant_square, our_colour {
     True, Some(square), board.White -> {
       let ep_square = square - 8
@@ -813,8 +844,10 @@ fn do_apply(
         dict.delete(board, ep_square),
         hash.toggle_piece(zobrist_hash, ep_square, board.Pawn, board.Black),
         opposing_pawn_material - board.pawn_value,
-        opposing_piece_square_score
-          - piece_table.piece_score(board.Pawn, board.Black, ep_square, phase),
+        opposing_piece_square_score_midgame
+          - piece_table.piece_score_midgame(board.Pawn, board.Black, ep_square),
+        opposing_piece_square_score_endgame
+          - piece_table.piece_score_endgame(board.Pawn, board.Black, ep_square),
       )
     }
     True, Some(square), board.Black -> {
@@ -823,15 +856,18 @@ fn do_apply(
         dict.delete(board, ep_square),
         hash.toggle_piece(zobrist_hash, ep_square, board.Pawn, board.White),
         opposing_pawn_material - board.pawn_value,
-        opposing_piece_square_score
-          - piece_table.piece_score(board.Pawn, board.White, ep_square, phase),
+        opposing_piece_square_score_midgame
+          - piece_table.piece_score_midgame(board.Pawn, board.White, ep_square),
+        opposing_piece_square_score_endgame
+          - piece_table.piece_score_endgame(board.Pawn, board.White, ep_square),
       )
     }
     _, _, _ -> #(
       board,
       zobrist_hash,
       opposing_pawn_material,
-      opposing_piece_square_score,
+      opposing_piece_square_score_midgame,
+      opposing_piece_square_score_endgame,
     )
   }
 
@@ -856,7 +892,8 @@ fn do_apply(
       king_position: our_king_position,
       non_pawn_material: our_non_pawn_material,
       pawn_material: our_pawn_material,
-      piece_square_score: our_piece_square_score,
+      piece_square_score_midgame: our_piece_square_score_midgame,
+      piece_square_score_endgame: our_piece_square_score_endgame,
     )
 
   let opposing_pieces =
@@ -864,7 +901,8 @@ fn do_apply(
       king_position: opposing_king_position,
       non_pawn_material: opposing_non_pawn_material,
       pawn_material: opposing_pawn_material,
-      piece_square_score: opposing_piece_square_score,
+      piece_square_score_midgame: opposing_piece_square_score_midgame,
+      piece_square_score_endgame: opposing_piece_square_score_endgame,
     )
 
   let #(white_pieces, black_pieces) = case to_move {

@@ -6,6 +6,7 @@ import gleeunit
 import pocket_watch
 import starfish
 import starfish/internal/board
+import starfish/internal/evaluate
 import starfish/internal/game
 import starfish/internal/move
 
@@ -399,18 +400,8 @@ pub fn to_standard_algebraic_notation_test() {
 }
 
 pub fn phase_test() {
-  let game = starfish.new()
-  assert game.phase(
-      game.white_pieces.non_pawn_material,
-      game.black_pieces.non_pawn_material,
-    )
-    == 0
-  let game = starfish.from_fen("k7/8/8/8/8/8/8/K7")
-  assert game.phase(
-      game.white_pieces.non_pawn_material,
-      game.black_pieces.non_pawn_material,
-    )
-    == 128
+  assert evaluate.phase(starfish.new()) == 0
+  assert evaluate.phase(starfish.from_fen("k7/8/8/8/8/8/8/K7")) == 128
 }
 
 fn apply_move(game: starfish.Game, move: String) -> starfish.Game {

@@ -361,11 +361,7 @@ fn search_loop(
 /// in order to save iterating the list a second time. The guesses are discarded
 /// after this point.
 fn order_moves(game: Game) -> List(#(Move, Int)) {
-  let phase =
-    game.phase(
-      game.white_pieces.non_pawn_material,
-      game.black_pieces.non_pawn_material,
-    )
+  let phase = evaluate.phase(game)
   game
   |> move.legal
   |> collect_guessed_eval(game, phase, [])
@@ -417,8 +413,18 @@ fn guess_eval(game: Game, move: Move, phase: Int) -> Int {
       piece
   }
 
-  let from_score = piece_table.piece_score(piece, colour, move.from, phase)
-  let to_score = piece_table.piece_score(moving_piece, colour, move.to, phase)
+  let from_score_midgame =
+    piece_table.piece_score_midgame(piece, colour, move.from)
+  let from_score_endgame =
+    piece_table.piece_score_endgame(piece, colour, move.from)
+  let from_score =
+    evaluate.interpolate_phase(from_score_midgame, from_score_endgame, phase)
+
+  let to_score_midgame = piece_table.piece_score_midgame(piece, colour, move.to)
+  let to_score_endgame = piece_table.piece_score_endgame(piece, colour, move.to)
+  let to_score =
+    evaluate.interpolate_phase(to_score_midgame, to_score_endgame, phase)
+
   let position_improvement = to_score - from_score
 
   let move_specific_score = case move {
