@@ -6,7 +6,6 @@ import gleeunit
 import pocket_watch
 import starfish
 import starfish/internal/board
-import starfish/internal/evaluate
 import starfish/internal/game
 import starfish/internal/move
 
@@ -35,7 +34,7 @@ pub fn try_from_fen_test() {
 }
 
 pub fn to_fen_test() {
-  let fen = game.to_fen(starfish.new())
+  let fen = game.to_fen(game.initial_position())
   assert fen == starfish.starting_fen
 
   let fen = "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1"
@@ -44,26 +43,26 @@ pub fn to_fen_test() {
 
 pub fn to_long_algebraic_notation_test() {
   assert move.Move(board.Pawn, from: 8, to: 24)
-    |> starfish.to_long_algebraic_notation
+    |> move.to_long_algebraic_notation
     == "a2a4"
   assert move.Move(board.Pawn, from: 6, to: 21)
-    |> starfish.to_long_algebraic_notation
+    |> move.to_long_algebraic_notation
     == "g1f3"
   assert move.Move(board.Pawn, from: 57, to: 42)
-    |> starfish.to_long_algebraic_notation
+    |> move.to_long_algebraic_notation
     == "b8c6"
   assert move.Move(board.Pawn, from: 49, to: 33)
-    |> starfish.to_long_algebraic_notation
+    |> move.to_long_algebraic_notation
     == "b7b5"
-  assert move.EnPassant(from: 32, to: 41) |> starfish.to_long_algebraic_notation
+  assert move.EnPassant(from: 32, to: 41) |> move.to_long_algebraic_notation
     == "a5b6"
-  assert move.Castle(from: 4, to: 6) |> starfish.to_long_algebraic_notation
+  assert move.Castle(from: 4, to: 6) |> move.to_long_algebraic_notation
     == "e1g1"
-  assert move.Castle(from: 4, to: 2) |> starfish.to_long_algebraic_notation
+  assert move.Castle(from: 4, to: 2) |> move.to_long_algebraic_notation
     == "e1c1"
-  assert move.Castle(from: 60, to: 62) |> starfish.to_long_algebraic_notation
+  assert move.Castle(from: 60, to: 62) |> move.to_long_algebraic_notation
     == "e8g8"
-  assert move.Castle(from: 60, to: 58) |> starfish.to_long_algebraic_notation
+  assert move.Castle(from: 60, to: 58) |> move.to_long_algebraic_notation
     == "e8c8"
   assert move.Promotion(
       from: 51,
@@ -71,7 +70,7 @@ pub fn to_long_algebraic_notation_test() {
       piece: board.Queen,
       captured_piece: None,
     )
-    |> starfish.to_long_algebraic_notation
+    |> move.to_long_algebraic_notation
     == "d7c8q"
   assert move.Promotion(
       from: 11,
@@ -79,18 +78,18 @@ pub fn to_long_algebraic_notation_test() {
       piece: board.Knight,
       captured_piece: Some(board.Rook),
     )
-    |> starfish.to_long_algebraic_notation
+    |> move.to_long_algebraic_notation
     == "d2c1n"
   assert move.Capture(board.Bishop, from: 49, to: 7, captured_piece: board.Pawn)
-    |> starfish.to_long_algebraic_notation
+    |> move.to_long_algebraic_notation
     == "b7h1"
 }
 
 pub fn parse_long_algebraic_notation_test() {
   let assert Ok(move) = starfish.parse_move("a2a4", starfish.new())
-  assert move == move.Move(board.Pawn, from: 8, to: 24)
+  assert starfish.get_move(move) == move.Move(board.Pawn, from: 8, to: 24)
   let assert Ok(move) = starfish.parse_move("g1f3", starfish.new())
-  assert move == move.Move(board.Knight, from: 6, to: 21)
+  assert starfish.get_move(move) == move.Move(board.Knight, from: 6, to: 21)
   let assert Ok(move) =
     starfish.parse_move(
       "b8c6",
@@ -98,7 +97,7 @@ pub fn parse_long_algebraic_notation_test() {
         "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
       ),
     )
-  assert move == move.Move(board.Knight, from: 57, to: 42)
+  assert starfish.get_move(move) == move.Move(board.Knight, from: 57, to: 42)
   let assert Ok(move) =
     starfish.parse_move(
       "B7b5",
@@ -106,7 +105,7 @@ pub fn parse_long_algebraic_notation_test() {
         "rnbqkbnr/pppppppp/8/8/P7/8/1PPPPPPP/RNBQKBNR b KQkq - 0 1",
       ),
     )
-  assert move == move.Move(board.Pawn, from: 49, to: 33)
+  assert starfish.get_move(move) == move.Move(board.Pawn, from: 49, to: 33)
   let assert Ok(move) =
     starfish.parse_move(
       "a5b6",
@@ -114,7 +113,7 @@ pub fn parse_long_algebraic_notation_test() {
         "rnbqkbnr/p1p1pppp/8/Pp1p4/8/8/1PPPPPPP/RNBQKBNR w KQkq b6 0 3",
       ),
     )
-  assert move == move.EnPassant(from: 32, to: 41)
+  assert starfish.get_move(move) == move.EnPassant(from: 32, to: 41)
   let assert Ok(move) =
     starfish.parse_move(
       "e1G1",
@@ -122,7 +121,7 @@ pub fn parse_long_algebraic_notation_test() {
         "rnbqkbnr/pp3ppp/8/2ppp3/4P3/5N2/PPPPBPPP/RNBQK2R w KQkq - 0 4",
       ),
     )
-  assert move == move.Castle(from: 4, to: 6)
+  assert starfish.get_move(move) == move.Castle(from: 4, to: 6)
   let assert Ok(move) =
     starfish.parse_move(
       "e1c1",
@@ -130,7 +129,7 @@ pub fn parse_long_algebraic_notation_test() {
         "rnbqkbnr/ppp2ppp/8/3pp3/3P4/2N1B3/PPPQPPPP/R3KBNR w KQkq - 0 5",
       ),
     )
-  assert move == move.Castle(from: 4, to: 2)
+  assert starfish.get_move(move) == move.Castle(from: 4, to: 2)
   let assert Ok(move) =
     starfish.parse_move(
       "e8g8",
@@ -138,7 +137,7 @@ pub fn parse_long_algebraic_notation_test() {
         "rnbqk2r/ppppbppp/5n2/4p3/2PPP3/8/PP3PPP/RNBQKBNR b KQkq - 0 4",
       ),
     )
-  assert move == move.Castle(from: 60, to: 62)
+  assert starfish.get_move(move) == move.Castle(from: 60, to: 62)
   let assert Ok(move) =
     starfish.parse_move(
       "E8C8",
@@ -146,7 +145,7 @@ pub fn parse_long_algebraic_notation_test() {
         "r3kbnr/pppqpppp/2n1b3/3p4/3PP3/8/PPP2PPP/RNBQKBNR b KQkq - 0 5",
       ),
     )
-  assert move == move.Castle(from: 60, to: 58)
+  assert starfish.get_move(move) == move.Castle(from: 60, to: 58)
   let assert Ok(move) =
     starfish.parse_move(
       "d7c8q",
@@ -154,7 +153,7 @@ pub fn parse_long_algebraic_notation_test() {
         "rnbq1bnr/pppPkpp1/4p2p/8/8/8/PPPP1PPP/RNBQKBNR w KQ - 1 5",
       ),
     )
-  assert move
+  assert starfish.get_move(move)
     == move.Promotion(Some(board.Bishop), from: 51, to: 58, piece: board.Queen)
   let assert Ok(move) =
     starfish.parse_move(
@@ -163,7 +162,7 @@ pub fn parse_long_algebraic_notation_test() {
         "rnbqkbnr/pppp1ppp/8/8/8/4P2P/PPPpKPP1/RNBQ1BNR b kq - 1 5",
       ),
     )
-  assert move
+  assert starfish.get_move(move)
     == move.Promotion(Some(board.Bishop), from: 11, to: 2, piece: board.Knight)
   let assert Ok(move) =
     starfish.parse_move(
@@ -172,7 +171,8 @@ pub fn parse_long_algebraic_notation_test() {
         "rn1qkbnr/pbpppppp/1p6/6P1/8/8/PPPPPP1P/RNBQKBNR b KQkq - 0 3",
       ),
     )
-  assert move == move.Capture(board.Bishop, board.Rook, from: 49, to: 7)
+  assert starfish.get_move(move)
+    == move.Capture(board.Bishop, board.Rook, from: 49, to: 7)
 
   let assert Error(Nil) = starfish.parse_move("abcd", starfish.new())
   let assert Error(Nil) = starfish.parse_move("e2e4extra", starfish.new())
@@ -181,9 +181,9 @@ pub fn parse_long_algebraic_notation_test() {
 
 pub fn parse_standard_algebraic_notation_test() {
   let assert Ok(move) = starfish.parse_move("a4", starfish.new())
-  assert move == move.Move(board.Pawn, from: 8, to: 24)
+  assert starfish.get_move(move) == move.Move(board.Pawn, from: 8, to: 24)
   let assert Ok(move) = starfish.parse_move("Nf3", starfish.new())
-  assert move == move.Move(board.Knight, from: 6, to: 21)
+  assert starfish.get_move(move) == move.Move(board.Knight, from: 6, to: 21)
   let assert Ok(move) =
     starfish.parse_move(
       "Nc6",
@@ -191,7 +191,7 @@ pub fn parse_standard_algebraic_notation_test() {
         "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
       ),
     )
-  assert move == move.Move(board.Knight, from: 57, to: 42)
+  assert starfish.get_move(move) == move.Move(board.Knight, from: 57, to: 42)
   let assert Ok(move) =
     starfish.parse_move(
       "b5",
@@ -199,7 +199,7 @@ pub fn parse_standard_algebraic_notation_test() {
         "rnbqkbnr/pppppppp/8/8/P7/8/1PPPPPPP/RNBQKBNR b KQkq - 0 1",
       ),
     )
-  assert move == move.Move(board.Pawn, from: 49, to: 33)
+  assert starfish.get_move(move) == move.Move(board.Pawn, from: 49, to: 33)
   let assert Ok(move) =
     starfish.parse_move(
       "axb6",
@@ -207,7 +207,7 @@ pub fn parse_standard_algebraic_notation_test() {
         "rnbqkbnr/p1p1pppp/8/Pp1p4/8/8/1PPPPPPP/RNBQKBNR w KQkq b6 0 3",
       ),
     )
-  assert move == move.EnPassant(from: 32, to: 41)
+  assert starfish.get_move(move) == move.EnPassant(from: 32, to: 41)
   let assert Ok(move) =
     starfish.parse_move(
       "O-O",
@@ -215,7 +215,7 @@ pub fn parse_standard_algebraic_notation_test() {
         "rnbqkbnr/pp3ppp/8/2ppp3/4P3/5N2/PPPPBPPP/RNBQK2R w KQkq - 0 4",
       ),
     )
-  assert move == move.Castle(from: 4, to: 6)
+  assert starfish.get_move(move) == move.Castle(from: 4, to: 6)
   let assert Ok(move) =
     starfish.parse_move(
       "O-O-O",
@@ -223,7 +223,7 @@ pub fn parse_standard_algebraic_notation_test() {
         "rnbqkbnr/ppp2ppp/8/3pp3/3P4/2N1B3/PPPQPPPP/R3KBNR w KQkq - 0 5",
       ),
     )
-  assert move == move.Castle(from: 4, to: 2)
+  assert starfish.get_move(move) == move.Castle(from: 4, to: 2)
   let assert Ok(move) =
     starfish.parse_move(
       "O-O",
@@ -231,7 +231,7 @@ pub fn parse_standard_algebraic_notation_test() {
         "rnbqk2r/ppppbppp/5n2/4p3/2PPP3/8/PP3PPP/RNBQKBNR b KQkq - 0 4",
       ),
     )
-  assert move == move.Castle(from: 60, to: 62)
+  assert starfish.get_move(move) == move.Castle(from: 60, to: 62)
   let assert Ok(move) =
     starfish.parse_move(
       "0-0-0",
@@ -239,7 +239,7 @@ pub fn parse_standard_algebraic_notation_test() {
         "r3kbnr/pppqpppp/2n1b3/3p4/3PP3/8/PPP2PPP/RNBQKBNR b KQkq - 0 5",
       ),
     )
-  assert move == move.Castle(from: 60, to: 58)
+  assert starfish.get_move(move) == move.Castle(from: 60, to: 58)
   let assert Ok(move) =
     starfish.parse_move(
       "c8q",
@@ -247,7 +247,7 @@ pub fn parse_standard_algebraic_notation_test() {
         "rnbq1bnr/pppPkpp1/4p2p/8/8/8/PPPP1PPP/RNBQKBNR w KQ - 1 5",
       ),
     )
-  assert move
+  assert starfish.get_move(move)
     == move.Promotion(Some(board.Bishop), from: 51, to: 58, piece: board.Queen)
   let assert Ok(move) =
     starfish.parse_move(
@@ -256,7 +256,7 @@ pub fn parse_standard_algebraic_notation_test() {
         "rnbqkbnr/pppp1ppp/8/8/8/4P2P/PPPpKPP1/RNBQ1BNR b kq - 1 5",
       ),
     )
-  assert move
+  assert starfish.get_move(move)
     == move.Promotion(Some(board.Bishop), from: 11, to: 2, piece: board.Knight)
   let assert Ok(move) =
     starfish.parse_move(
@@ -265,20 +265,21 @@ pub fn parse_standard_algebraic_notation_test() {
         "rn1qkbnr/pbpppppp/1p6/6P1/8/8/PPPPPP1P/RNBQKBNR b KQkq - 0 3",
       ),
     )
-  assert move == move.Capture(board.Bishop, board.Rook, from: 49, to: 7)
+  assert starfish.get_move(move)
+    == move.Capture(board.Bishop, board.Rook, from: 49, to: 7)
   let assert Ok(move) =
     starfish.parse_move(
       "Rac4",
       starfish.from_fen("k7/8/8/8/R4R2/8/8/7K w - - 0 1"),
     )
-  assert move == move.Move(board.Rook, from: 24, to: 26)
+  assert starfish.get_move(move) == move.Move(board.Rook, from: 24, to: 26)
 
   let assert Ok(move) =
     starfish.parse_move(
       "R7c6",
       starfish.from_fen("k7/2r5/8/8/2r5/8/8/7K b - - 0 1"),
     )
-  assert move == move.Move(board.Rook, from: 50, to: 42)
+  assert starfish.get_move(move) == move.Move(board.Rook, from: 50, to: 42)
 
   let assert Error(Nil) = starfish.parse_move("e2", starfish.new())
   let assert Error(Nil) = starfish.parse_move("Bxe4", starfish.new())
@@ -286,111 +287,105 @@ pub fn parse_standard_algebraic_notation_test() {
 }
 
 pub fn to_standard_algebraic_notation_test() {
-  assert starfish.to_standard_algebraic_notation(
+  assert move.to_standard_algebraic_notation(
       move.Move(board.Pawn, from: 8, to: 24),
-      starfish.new(),
+      game.initial_position(),
     )
     == "a4"
-  assert starfish.to_standard_algebraic_notation(
+  assert move.to_standard_algebraic_notation(
       move.Move(board.Knight, from: 6, to: 21),
-      starfish.new(),
+      game.initial_position(),
     )
     == "Nf3"
-  assert starfish.to_standard_algebraic_notation(
+  assert move.to_standard_algebraic_notation(
       move.Move(board.Knight, from: 57, to: 42),
-      starfish.from_fen(
+      game.from_fen(
         "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1",
       ),
     )
     == "Nc6"
 
-  assert starfish.to_standard_algebraic_notation(
+  assert move.to_standard_algebraic_notation(
       move.Move(board.Pawn, from: 49, to: 33),
-      starfish.from_fen(
-        "rnbqkbnr/pppppppp/8/8/P7/8/1PPPPPPP/RNBQKBNR b KQkq - 0 1",
-      ),
+      game.from_fen("rnbqkbnr/pppppppp/8/8/P7/8/1PPPPPPP/RNBQKBNR b KQkq - 0 1"),
     )
     == "b5"
 
-  assert starfish.to_standard_algebraic_notation(
+  assert move.to_standard_algebraic_notation(
       move.EnPassant(from: 32, to: 41),
-      starfish.from_fen(
+      game.from_fen(
         "rnbqkbnr/p1p1pppp/8/Pp1p4/8/8/1PPPPPPP/RNBQKBNR w KQkq b6 0 3",
       ),
     )
     == "axb6"
 
-  assert starfish.to_standard_algebraic_notation(
+  assert move.to_standard_algebraic_notation(
       move.Castle(from: 4, to: 6),
-      starfish.from_fen(
+      game.from_fen(
         "rnbqkbnr/pp3ppp/8/2ppp3/4P3/5N2/PPPPBPPP/RNBQK2R w KQkq - 0 4",
       ),
     )
     == "O-O"
 
-  assert starfish.to_standard_algebraic_notation(
+  assert move.to_standard_algebraic_notation(
       move.Castle(from: 4, to: 2),
-      starfish.from_fen(
+      game.from_fen(
         "rnbqkbnr/ppp2ppp/8/3pp3/3P4/2N1B3/PPPQPPPP/R3KBNR w KQkq - 0 5",
       ),
     )
     == "O-O-O"
 
-  assert starfish.to_standard_algebraic_notation(
+  assert move.to_standard_algebraic_notation(
       move.Castle(from: 60, to: 62),
-      starfish.from_fen(
+      game.from_fen(
         "rnbqk2r/ppppbppp/5n2/4p3/2PPP3/8/PP3PPP/RNBQKBNR b KQkq - 0 4",
       ),
     )
     == "O-O"
 
-  assert starfish.to_standard_algebraic_notation(
+  assert move.to_standard_algebraic_notation(
       move.Castle(from: 60, to: 58),
-      starfish.from_fen(
+      game.from_fen(
         "r3kbnr/pppqpppp/2n1b3/3p4/3PP3/8/PPP2PPP/RNBQKBNR b KQkq - 0 5",
       ),
     )
     == "O-O-O"
 
-  assert starfish.to_standard_algebraic_notation(
+  assert move.to_standard_algebraic_notation(
       move.Promotion(Some(board.Bishop), from: 51, to: 58, piece: board.Queen),
-      starfish.from_fen(
-        "rnbq1bnr/pppPkpp1/4p2p/8/8/8/PPPP1PPP/RNBQKBNR w KQ - 1 5",
-      ),
+      game.from_fen("rnbq1bnr/pppPkpp1/4p2p/8/8/8/PPPP1PPP/RNBQKBNR w KQ - 1 5"),
     )
     == "dxc8=Q"
 
-  assert starfish.to_standard_algebraic_notation(
+  assert move.to_standard_algebraic_notation(
       move.Promotion(Some(board.Bishop), from: 11, to: 2, piece: board.Knight),
-      starfish.from_fen(
-        "rnbqkbnr/pppp1ppp/8/8/8/4P2P/PPPpKPP1/RNBQ1BNR b kq - 1 5",
-      ),
+      game.from_fen("rnbqkbnr/pppp1ppp/8/8/8/4P2P/PPPpKPP1/RNBQ1BNR b kq - 1 5"),
     )
     == "dxc1=N"
 
-  assert starfish.to_standard_algebraic_notation(
+  assert move.to_standard_algebraic_notation(
       move.Capture(board.Bishop, board.Rook, from: 49, to: 7),
-      starfish.from_fen(
+      game.from_fen(
         "rn1qkbnr/pbpppppp/1p6/6P1/8/8/PPPPPP1P/RNBQKBNR b KQkq - 0 3",
       ),
     )
     == "Bxh1"
 
-  assert starfish.to_standard_algebraic_notation(
+  assert move.to_standard_algebraic_notation(
       move.Move(board.Rook, from: 24, to: 26),
-      starfish.from_fen("k7/8/8/8/R4R2/8/8/7K w - - 0 1"),
+      game.from_fen("k7/8/8/8/R4R2/8/8/7K w - - 0 1"),
     )
     == "Rac4"
 
-  assert starfish.to_standard_algebraic_notation(
+  assert move.to_standard_algebraic_notation(
       move.Move(board.Rook, from: 50, to: 42),
-      starfish.from_fen("k7/2r5/8/8/2r5/8/8/7K b - - 0 1"),
+      game.from_fen("k7/2r5/8/8/2r5/8/8/7K b - - 0 1"),
     )
     == "R7c6"
 
-  assert starfish.to_standard_algebraic_notation(
+  assert move.to_standard_algebraic_notation(
       move.Capture(board.Queen, board.Bishop, from: 31, to: 13),
-      starfish.from_fen("k7/8/8/8/5Q1Q/8/5b1Q/3K4 w - - 0 1"),
+      game.from_fen("k7/8/8/8/5Q1Q/8/5b1Q/3K4 w - - 0 1"),
     )
     == "Qh4xf2"
 
@@ -400,8 +395,8 @@ pub fn to_standard_algebraic_notation_test() {
 }
 
 pub fn phase_test() {
-  assert evaluate.phase(starfish.new()) == 0
-  assert evaluate.phase(starfish.from_fen("k7/8/8/8/8/8/8/K7")) == 128
+  assert game.phase(game.initial_position()) == 0
+  assert game.phase(game.from_fen("k7/8/8/8/8/8/8/K7")) == 128
 }
 
 fn apply_move(game: starfish.Game, move: String) -> starfish.Game {
@@ -468,10 +463,10 @@ fn perft_all(fen: String, expected: List(Int)) {
 }
 
 fn perft(fen: String, depth: Int, expected_moves: Int) {
-  assert do_perft(game.from_fen(fen), depth - 1) == expected_moves
+  assert do_perft(starfish.from_fen(fen), depth - 1) == expected_moves
 }
 
-fn do_perft(game: game.Game, depth: Int) -> Int {
+fn do_perft(game: starfish.Game, depth: Int) -> Int {
   let legal_moves = starfish.legal_moves(game)
   case depth {
     0 -> list.length(legal_moves)
@@ -502,14 +497,15 @@ pub fn search_test_() {
       until: starfish.Depth(5),
     )
   // b4f4
-  assert move == move.Capture(board.Rook, board.Pawn, from: 25, to: 29)
+  assert starfish.get_move(move)
+    == move.Capture(board.Rook, board.Pawn, from: 25, to: 29)
 
   let assert Ok(move) =
     starfish.search(
       starfish.from_fen("8/8/5k1K/8/5r2/8/8/8 b - - 34 18"),
       until: starfish.Depth(10),
     )
-  assert move == move.Move(board.Rook, from: 29, to: 31)
+  assert starfish.get_move(move) == move.Move(board.Rook, from: 29, to: 31)
 }
 
 pub fn perft_initial_position_test_() {
@@ -716,12 +712,12 @@ fn test_apply_move(
 ) {
   let game =
     starting_fen
-    |> starfish.from_fen
-    |> list.fold(moves, _, starfish.apply_move)
+    |> game.from_fen
+    |> list.fold(moves, _, move.apply)
 
   let game = game.Game(..game, previous_positions: [])
 
-  let expected_game = starfish.from_fen(expected_fen)
+  let expected_game = game.from_fen(expected_fen)
 
   assert game == expected_game
 }

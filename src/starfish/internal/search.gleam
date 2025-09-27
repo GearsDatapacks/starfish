@@ -3,7 +3,6 @@ import gleam/int
 import gleam/list
 import gleam/option.{type Option, None, Some}
 import starfish/internal/board
-import starfish/internal/evaluate
 import starfish/internal/game.{type Game}
 import starfish/internal/hash
 import starfish/internal/move.{type Move}
@@ -361,7 +360,7 @@ fn search_loop(
 /// in order to save iterating the list a second time. The guesses are discarded
 /// after this point.
 fn order_moves(game: Game) -> List(#(Move, Int)) {
-  let phase = evaluate.phase(game)
+  let phase = game.phase(game)
   game
   |> move.legal
   |> collect_guessed_eval(game, phase, [])
@@ -418,12 +417,12 @@ fn guess_eval(game: Game, move: Move, phase: Int) -> Int {
   let from_score_endgame =
     piece_table.piece_score_endgame(piece, colour, move.from)
   let from_score =
-    evaluate.interpolate_phase(from_score_midgame, from_score_endgame, phase)
+    game.interpolate_phase(from_score_midgame, from_score_endgame, phase)
 
   let to_score_midgame = piece_table.piece_score_midgame(piece, colour, move.to)
   let to_score_endgame = piece_table.piece_score_endgame(piece, colour, move.to)
   let to_score =
-    evaluate.interpolate_phase(to_score_midgame, to_score_endgame, phase)
+    game.interpolate_phase(to_score_midgame, to_score_endgame, phase)
 
   let position_improvement = to_score - from_score
 
@@ -467,7 +466,7 @@ fn quiescent_search(
   best_eval: Int,
   best_opponent_move: Int,
 ) -> Int {
-  let evaluation = evaluate.evaluate(game, moves)
+  let evaluation = game.evaluation(game, moves)
 
   use <- bool.guard(evaluation >= best_opponent_move, evaluation)
 

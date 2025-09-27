@@ -1,17 +1,25 @@
 import birl
 import gleam/bool
+import gleam/list
 import gleam/result
 import starfish/internal/board
 import starfish/internal/game
 import starfish/internal/move
 import starfish/internal/search
 
-pub type Game =
-  game.Game
+pub opaque type Game {
+  Game(game: game.Game)
+}
 
 /// A single legal move on the chess board.
-pub type Move =
-  move.Move
+pub opaque type Move {
+  Move(move: move.Move)
+}
+
+@internal
+pub fn get_move(move: Move) -> move.Move {
+  move.move
+}
 
 /// The [FEN string](https://en.wikipedia.org/wiki/Forsyth%E2%80%93Edwards_Notation)
 /// representing the initial position of a chess game.
@@ -36,7 +44,7 @@ pub const starting_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0
 /// starfish.from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR")
 /// ```
 pub fn from_fen(fen: String) -> Game {
-  game.from_fen(fen)
+  Game(game.from_fen(fen))
 }
 
 pub type FenParseError {
@@ -84,7 +92,9 @@ pub type FenParseError {
 ///   starfish.try_from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR")
 /// ```
 pub fn try_from_fen(fen: String) -> Result(Game, FenParseError) {
-  result.map_error(game.try_from_fen(fen), convert_fen_parse_error)
+  game.try_from_fen(fen)
+  |> result.map_error(convert_fen_parse_error)
+  |> result.map(Game)
 }
 
 // Since circular imports are not allowed, but we want the user to be able to
@@ -107,7 +117,7 @@ fn convert_fen_parse_error(error: game.FenParseError) -> FenParseError {
 
 /// Returns a game representing the initial position.
 pub fn new() -> Game {
-  game.initial_position()
+  Game(game.initial_position())
 }
 
 /// Convert a game into its FEN string representation.
@@ -118,11 +128,11 @@ pub fn new() -> Game {
 /// assert starfish.to_fen(starfish.new()) == starfish.starting_fen
 /// ```
 pub fn to_fen(game: Game) -> String {
-  game.to_fen(game)
+  game.to_fen(game.game)
 }
 
 pub fn legal_moves(game: Game) -> List(Move) {
-  move.legal(game)
+  list.map(move.legal(game.game), Move)
 }
 
 /// Used to determine how long to search positions
@@ -148,15 +158,15 @@ pub fn search(game: Game, until cutoff: SearchCutoff) -> Result(Move, Nil) {
     }
   }
 
-  search.best_move(game, until)
+  result.map(search.best_move(game.game, until), Move)
 }
 
 pub fn apply_move(game: Game, move: Move) -> Game {
-  move.apply(game, move)
+  Game(move.apply(game.game, move.move))
 }
 
 pub fn to_standard_algebraic_notation(move: Move, game: Game) -> String {
-  move.to_standard_algebraic_notation(move, game)
+  move.to_standard_algebraic_notation(move.move, game.game)
 }
 
 /// Convert a move to [long algebraic notation](
@@ -164,7 +174,7 @@ pub fn to_standard_algebraic_notation(move: Move, game: Game) -> String {
 /// specifically the UCI format, containing the start and end positions. For
 /// example, `e2e4` or `c7d8q`.
 pub fn to_long_algebraic_notation(move: Move) -> String {
-  move.to_long_algebraic_notation(move)
+  move.to_long_algebraic_notation(move.move)
 }
 
 /// Parses a move from either long algebraic notation, in the same format as
@@ -173,10 +183,12 @@ pub fn to_long_algebraic_notation(move: Move) -> String {
 /// Returns an error if the syntax is invalid or the move is not legal on the
 /// board.
 pub fn parse_move(move: String, game: Game) -> Result(Move, Nil) {
-  let legal_moves = legal_moves(game)
+  let legal_moves = move.legal(game.game)
   case move.from_long_algebraic_notation(move, legal_moves) {
-    Ok(move) -> Ok(move)
-    Error(_) -> move.from_standard_algebraic_notation(move, game, legal_moves)
+    Ok(move) -> Ok(Move(move))
+    Error(_) ->
+      move.from_standard_algebraic_notation(move, game.game, legal_moves)
+      |> result.map(Move)
   }
 }
 
@@ -196,6 +208,7 @@ pub type DrawReason {
 
 /// Returns the current game state: A win, draw or neither.
 pub fn state(game: Game) -> GameState {
+  let game = game.game
   use <- bool.guard(game.half_moves >= 50, Draw(FiftyMoves))
   use <- bool.guard(
     game.is_insufficient_material(game),
