@@ -345,7 +345,6 @@ fn sliding_check_block_line(
           board,
           position,
           king_position,
-          False,
           direction,
           [position],
         )
@@ -361,7 +360,6 @@ fn sliding_check_block_line_loop(
   board: Board,
   position: Int,
   king_position: Int,
-  found_king: Bool,
   direction: Direction,
   line: List(Int),
 ) -> List(Int) {
@@ -374,7 +372,6 @@ fn sliding_check_block_line_loop(
         board,
         new_position,
         king_position,
-        found_king,
         direction,
         [new_position, ..line],
       )
