@@ -34,17 +34,19 @@ pub type Piece {
   King
 }
 
-pub const pawn_value = 100
+// Values taken from https://hxim.github.io/Stockfish-Evaluation-Guide/
 
-pub const knight_value = 300
+pub const pawn_value = 124
 
-pub const bishop_value = 300
+pub const knight_value = 781
 
-pub const rook_value = 500
+pub const bishop_value = 825
 
-pub const queen_value = 900
+pub const rook_value = 1276
 
-pub const king_value = 1000
+pub const queen_value = 2538
+
+pub const king_value = 10_000
 
 pub fn piece_value(piece: Piece) -> Int {
   case piece {

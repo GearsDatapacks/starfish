@@ -494,16 +494,8 @@ fn castling_to_string(castling: Castling) -> String {
 pub fn is_insufficient_material(game: Game) -> Bool {
   game.black_pieces.pawn_material == 0
   && game.white_pieces.pawn_material == 0
-  && {
-    game.black_pieces.non_pawn_material == board.bishop_value
-    || game.black_pieces.non_pawn_material == board.knight_value
-    || game.black_pieces.non_pawn_material == 0
-  }
-  && {
-    game.white_pieces.non_pawn_material == board.bishop_value
-    || game.white_pieces.non_pawn_material == board.knight_value
-    || game.white_pieces.non_pawn_material == 0
-  }
+  && game.black_pieces.non_pawn_material <= board.bishop_value
+  && game.white_pieces.non_pawn_material <= board.bishop_value
 }
 
 pub fn is_threefold_repetition(game: Game) -> Bool {
@@ -532,12 +524,15 @@ fn is_threefold_repetition_loop(
 
 const phase_multiplier = 128
 
-/// About queen + rook, so one major piece per side
-const endgame_material = 1400
+// Values taken from https://hxim.github.io/Stockfish-Evaluation-Guide/
 
-/// Below this material limit, the endgame weight is zero. this is about enough
-/// for three minor pieces to be captured.
-const middlegame_material = 3000
+/// About queen + rook, so one major piece per side. If total material is less
+/// than this, then we are completely in the endgame. 
+const endgame_material = 3915
+
+/// Above this material limit, the endgame weight is zero. this is about enough
+/// for three minor pieces to be captured .
+const middlegame_material = 15_258
 
 pub fn phase(game: Game) -> Int {
   let non_pawn_material =
@@ -590,8 +585,12 @@ fn position_score(pieces: PieceInfo, phase: Int) -> Int {
     piece_square_score_midgame:,
     piece_square_score_endgame:,
   ) = pieces
+
+  // Pawns become much more valuable in the endgame, about 1.5x
+  let pawn_material_endgame = pawn_material * 15 / 10
+
   non_pawn_material
-  + pawn_material
+  + interpolate_phase(pawn_material, pawn_material_endgame, phase)
   + interpolate_phase(
     piece_square_score_midgame,
     piece_square_score_endgame,

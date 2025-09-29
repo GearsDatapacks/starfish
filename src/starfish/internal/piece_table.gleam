@@ -6,7 +6,7 @@
 
 import starfish/internal/board
 
-// Values taken from https://www.chessprogramming.org/Simplified_Evaluation_Function
+// Values taken from https://hxim.github.io/Stockfish-Evaluation-Guide/
 
 // We use tuples for constant time accessing. The values are constant so we don't
 // need to worry about the cost of updating.
