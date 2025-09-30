@@ -1,4 +1,3 @@
-import birl
 import gleam/bool
 import gleam/list
 import gleam/result
@@ -153,13 +152,17 @@ pub fn search(game: Game, until cutoff: SearchCutoff) -> Result(Move, Nil) {
   let until = case cutoff {
     Depth(depth:) -> fn(current_depth) { current_depth > depth }
     Time(milliseconds:) -> {
-      let end_time = birl.monotonic_now() + milliseconds * 1000
-      fn(_) { birl.monotonic_now() >= end_time }
+      let end_time = monotonic_time() + milliseconds
+      fn(_) { monotonic_time() >= end_time }
     }
   }
 
   result.map(search.best_move(game.game, until), Move)
 }
+
+@external(erlang, "starfish_ffi", "monotonic_time")
+@external(javascript, "./starfish_ffi.mjs", "monotonic_time")
+fn monotonic_time() -> Int
 
 pub fn apply_move(game: Game, move: Move) -> Game {
   Game(move.apply(game.game, move.move))
